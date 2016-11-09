@@ -604,6 +604,20 @@ angular.module('ngWebCrypto')
     .factory('$webCrypto', function ($webCryptoProvider, $injector) {
         var tools = $injector.instantiate(NgWebCryptoUtils);
         return {
+            tools: {
+                ArrayBufferToHexString: function(ab) {
+                    return tools.ABToHS(ab);
+                },
+                HexStringToArrayBuffer: function(hs) {
+                    return tools.HSToAB(hs);
+                },
+                ArrayBufferToString: function(ab) {
+                    return tools.ABtoString(ab);
+                },
+                StringToArrayBuffer: function(str) {
+                    return tools.StringtoAB(str);
+                }
+            },
             import: function (raw) {
                 var newName = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
                 return $webCryptoProvider.importKey(
@@ -655,12 +669,45 @@ angular.module('ngWebCrypto')
                     console.error('No default ECDH key defined.');
                 }
             },
+            importAndDerive: function(name, raw) {
+                var importName = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
+                var rsaKeyName = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
+                var promise = new Promise(function (resolve, reject) {
+                    $webCryptoProvider.importKey(
+                        {
+                            name: importName,
+                            raw: raw
+                        }
+                    )
+                    .success(function (importedKeyName) {
+                        $webCryptoProvider.derive(
+                            {
+                                name: rsaKeyName,
+                                privateKeyName: name,
+                                publicKeyName: importedKeyName
+                            }
+                        )
+                        .success(function (derivedKeyName) {
+                            resolve(derivedKeyName);
+                        });
+                    });
+                });
+                promise.success = function (fn) {
+                    promise.then(function (data) {
+                        fn(data);
+                    });
+                    return promise;
+                }
+                promise.error = function (fn) {
+                    promise.then(null, function (name) {
+                        fn(name);
+                    });
+                    return promise;
+                }
+                return promise;
+            },
             export: function (name) {
-                return $webCryptoProvider.exportKey(
-                    {
-                        name: name
-                    }
-                );
+                return $webCryptoProvider.exportKey({name: name});
             },
             exportDefaultKey: function () {
                 return $webCryptoProvider.exportKey({ default: true });

@@ -1,0 +1,23 @@
+{
+  "name": "angular-web-crypto",
+  "homepage": "https://github.com/gchiappe/angular-web-crypto",
+  "authors": [
+    "Giancarlo Chiappe Aguilar <gchiappe@outlook.com.pe>"
+  ],
+  "description": "Web Cryptography bindings for AngularJS.",
+  "main": "ng-web-crypto.js",
+  "keywords": [
+    "webcrypto",
+    "webcryptoapi",
+    "cryptography",
+    "angular"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
