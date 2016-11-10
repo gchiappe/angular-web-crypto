@@ -1,0 +1,33 @@
+{
+  "name": "angular-web-crypto",
+  "version": "1.0.0",
+  "description": "Web Cryptography API bindings for AngularJS",
+  "main": "ng-web-crypto.js",
+  "dependencies": {
+    "babel-cli": "^6.18.0",
+    "babel-preset-latest": "^6.16.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.18.0",
+    "babel-preset-latest": "^6.16.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gchiappe/angular-web-crypto.git"
+  },
+  "keywords": [
+    "crypto",
+    "webcrypto",
+    "cryptography",
+    "angular"
+  ],
+  "author": "Giancarlo A. Chiappe Aguilar <gchiappe@outlook.com.pe>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/gchiappe/angular-web-crypto/issues"
+  },
+  "homepage": "https://github.com/gchiappe/angular-web-crypto#readme"
+}

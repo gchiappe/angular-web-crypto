@@ -10,6 +10,16 @@ Angular bindings and XHR for Web Cryptography API.
 Most browsers that meet one requirement also meet the second one. Please note that this does not work
 with IE and will never be. Using on MS Edge browser has not been tested but should work.
 
+## Installation
+
+```
+bower install angular-web-crypto --save-dev
+```
+
+```html
+<script src="bower_components/angular-web-crypto/ng-web-crypto.min.js"></script>
+```
+
 ## ECDH Key Agreement, Encryption and Decryption
 
 Create your Elliptic Curve Diffie-Hellman private key.
