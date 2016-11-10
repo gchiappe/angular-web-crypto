@@ -69,12 +69,14 @@ angular.module('ngWebCrypto')
     .factory('$webCryptoProvider', function ($injector) {
         var crypto = window.crypto;
         if (!crypto.subtle) {
-            console.error('ngWebCrypto: W3C WebCrypto API not supported in this browser. IE11 is not supported.');
+            console.error('ngWebCrypto: WebCrypto API not supported in this browser. IE browsers are not supported.');
             return;
         }
         var tools = $injector.instantiate(NgWebCryptoUtils);
+        // almacenar los cripto-objetos en variables de una funcion anonima.
         var keys = [];
         var cryptoKeys = [];
+        // llaves ECDH
         var getKey = function (kName) {
             for (var c = 0; c < keys.length; c++) {
                 if (keys[c].name == kName) {
@@ -83,6 +85,7 @@ angular.module('ngWebCrypto')
             }
             return -1;
         }
+        // llaves AES
         var getCryptoKey = function (kName) {
             for (var c = 0; c < cryptoKeys.length; c++) {
                 if (cryptoKeys[c].name == kName) {
@@ -732,6 +735,8 @@ angular.module('ngWebCrypto')
         }
     })
     .factory('$httpCrypto', function ($webCryptoProvider, $webCrypto, $http, $injector) {
+        //This service is a WIP part, not tested but should be functional, requires a compatible
+        //server.
         var tools = $injector.instantiate(NgWebCryptoUtils);
         return {
             post: function (server, data, key = null) {

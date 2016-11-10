@@ -2,13 +2,37 @@
 
 Angular bindings and XHR for Web Cryptography API.
 
+More information about "Web Crypto API":
+
+- [World Wide Web Consortium (W3C)](https://www.w3.org/TR/WebCryptoAPI/)
+- [Mozilla Developer Network](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
+- [WebCrypto by The Chromium Project](https://www.chromium.org/blink/webcrypto)
+
+
 ## Requirements
 
-- ECMAScript 6 compatible browser, [check this list](http://kangax.github.io/compat-table/es6/).
 - Web Cryptography API compatible browser, [check this list](http://caniuse.com/#feat=cryptography).
+- Angular
 
-Most browsers that meet one requirement also meet the second one. Please note that this does not work
-with IE and will never be. Using on MS Edge browser has not been tested but should work.
+Please note that this does not work with MS IE and will never be. 
+Using on MS Edge browser has not been tested but should work.
+
+## Building from source
+
+1. Clone
+2. Install dependencies
+    
+    Install gulp-cli only if you don't have it already.
+    ```bash
+    $ sudo npm install --global gulp-cli
+    $ npm install
+    ```
+3. Build
+    ```bash
+    $ gulp
+    ```
+
+    Output is in the dist folder.
 
 ## Installation
 
@@ -17,7 +41,8 @@ bower install angular-web-crypto --save-dev
 ```
 
 ```html
-<script src="bower_components/angular-web-crypto/ng-web-crypto.min.js"></script>
+<!-- You can also use the ES6 version, but I recommend ES5 for best compatibility. -->
+<script src="bower_components/angular-web-crypto/dist/ng-web-crypto.es5.min.js"></script>
 ```
 
 ## ECDH Key Agreement, Encryption and Decryption
@@ -25,15 +50,14 @@ bower install angular-web-crypto --save-dev
 Create your Elliptic Curve Diffie-Hellman private key.
 
 ```javascript
-angular.module('YourApp', 'ngWebCrypto')
-.config(($webCryptoProvider) => {
+// This code is intended to be used in the module (application) configuration.
+angular.module('YourApp', ['ngWebCrypto'])
+.config(function($webCryptoProvider) {
     //Generate your private key and set as default.
-    $webCryptoProvider.generateKey(
-        {
+    $webCryptoProvider.generateKey({
             name: 'myAppKey'
-        }
-    ).success(
-        keyName => {
+    }).success(
+        function(keyName) {
             console.log('Key Generated!');
         }
     )
@@ -43,21 +67,22 @@ angular.module('YourApp', 'ngWebCrypto')
 Import other party public raw key. The key must be encoded in Hexadecimal String. 
 
 ```javascript
+// This code is intended to be used in a "service", "controller" or even a "directive".
 angular.module('YourApp')
-.controller('YourController',($webCrypto) => {
+.controller('YourController', function($webCrypto) {
     // If you have in ArrayBuffer format, convert first to Uint8Array.
     // var keyInUint8Array = new Uint8Array(keyArrayBuffer);
     // then convert Uint8Array to HexString
     // var exportedKeyInHexaString = $webCrypto.tools.ArrayBufferToHexString(keyInUint8Array);
     $webCrypto.importAndDeriveWithDefaultKey(exportedKeyInHexaString)
     .success(
-        derivedKeyName => {
+        function(derivedKeyName) {
             console.log('Key derived successfully.');
             // Now you can encrypt and decrypt.
             // encrypt test:
             $webCrypto.encrypt(derivedKeyName, "MY DATA TO BE ENCRYPTED")
             .success(
-                (encryptedData, iv) => {
+                function(encryptedData, iv) {
                     // The data is now encrypted in encryptedData, the IV has been stored in the IV
                     // variable, both of them has been converted to HexString for easy transport.
                     console.log('The data has been encrypted successfully.');
@@ -66,7 +91,7 @@ angular.module('YourApp')
                     // decrypt test:
                     $webCrypto.decrypt(derivedKeyName,encryptedData,iv)
                     .success(
-                        decryptedData => {
+                        function(decryptedData) {
                             // The data has been decrypted now
                             console.log('The data has been decrypted successfully.');
                             console.log('decrypted data:', decryptedData);
@@ -87,28 +112,28 @@ example purposes and it **should** be used at config time.
 
 ```javascript
 angular.module('YourApp')
-.controller('YourController',($webCryptoProvider, $webCrypto) => {
+.controller('YourController', function($webCryptoProvider, $webCrypto) {
     //Generate your ECDH private key.
     $webCryptoProvider.generateKey({name: 'alice'})
     .success(
-        aliceKeyName => {
+        function(aliceKeyName) {
             //Here you can export alice's public key to send to "bob" so he can also agree the keys.
             var alicePublicKey = $webCrypto.export(aliceKeyName);
             //Generate another ECDH private key (we will use the public part of this one)
             $webCryptoProvider.generateKey({name: 'bob'})
             .success(
-                bobKeyName => {
+                function(bobKeyName) {
                     //We will export the bob's public key.
                     var bobPublicKey = $webCrypto.export(bobKeyName);
                     //Now we will import the bob's public key and derive with alice's to generate
                     //a RSA-GCM key for encrypting and decrypting.
                     $webCrypto.importAndDerive(aliceKeyName, bobPublicKey)
                     .success(
-                        cryptoKeyName => {
+                        function(cryptoKeyName) {
                             //Now we have the CryptoKey that we can use to encrypt and decrypt data.
                             $webCrypto.encrypt(cryptoKeyName, 'Hello Bob, how you doing?')
                             .success(
-                                (encrypted, iv) => {
+                                function(encrypted, iv) {
                                     //The string has now been encrypted, we will show this to the console.
                                     //This format (HexString) is safe for XHR and plain text.
                                     console.log('encrypted', encrypted);
@@ -121,7 +146,7 @@ angular.module('YourApp')
                                     //Now we will decrypt the data
                                     $webCrypto.decrypt(cryptoKeyName, encrypted, iv)
                                     .success(
-                                        decrypted => {
+                                        function(decrypted) {
                                             //The data has been decrypted and converted to string
                                             console.log('decrypted', decrypted);
                                         }
@@ -140,6 +165,14 @@ angular.module('YourApp')
 ## Encrypting JSON objects
 
 Just convert your JSON objects to String using JSON.stringify before encrypting and JSON.parse after decrypting.
+
+## Work in progress
+
+This library is in current development but **core functionalities** are working without issues and are unlikely to be modified. More extended features are comming soon.
+
+## Docs
+
+Documentation will be soon available, for now you can try to read the source file, its very clear.
 
 ## License
 
