@@ -3,13 +3,25 @@ ngWebCrypto
 ---
 The MIT License (MIT)
 
-Copyright ©2016 Giancarlo Chiappe Aguilar
+copyright ©2016 Giancarlo A. Chiappe Aguilar
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
 ---
 ©2016 Giancarlo Chiappe Aguilar <gchiappe@outlook.com.pe>
 */
@@ -66,16 +78,15 @@ var NgWebCryptoUtils = (function () {
 })();
 angular.module('ngWebCrypto', []);
 angular.module('ngWebCrypto')
-    .factory('$webCryptoProvider', function ($injector) {
+    .provider('$webCrypto', function ($injector) {
         var crypto = window.crypto;
         if (!crypto.subtle) {
             console.error('ngWebCrypto: WebCrypto API not supported in this browser. IE browsers are not supported.');
-            return;
         }
         var tools = $injector.instantiate(NgWebCryptoUtils);
-        // almacenar los cripto-objetos en variables de una funcion anonima.
-        var keys = [];
-        var cryptoKeys = [];
+        //almacenes: almacenar los cripto-objetos en variables de una funcion anonima.
+        var keys = []; // llaves ECDH
+        var cryptoKeys = []; // llaves criptograficas (def. AES-GCM)
         // llaves ECDH
         var getKey = function (kName) {
             for (var c = 0; c < keys.length; c++) {
@@ -95,534 +106,547 @@ angular.module('ngWebCrypto')
             return -1;
         }
         var defaultKey = null, defaultCryptoKey = null;
-        return {
-            getDefaultKeys: function () {
-                return {
-                    ecdh: defaultKey,
-                    crypto: defaultCryptoKey
+        // Funciones del proveedor:
+        this.generateKey = function (options) {
+            if (tools.isDefined(options.random)) {
+                if (options.random) {
+                    options.name = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
                 }
-            },
-            checkKey: function (kName) {
-                return getKey(kName) != -1;
-            },
-            checkCryptoKey: function (kName) {
-                return getCryptoKey(kName) != -1;
-            },
-            importKey: function (options) {
-                if (!tools.isDefined(options.name)) {
-                    console.error('key name is required for importing.');
-                    return;
-                }
-                if (getKey(options.name) != -1) {
-                    console.error('key name "', options.name, '" already in use.');
-                    return;
-                }
-                if (!tools.isDefined(options.crv)) options.crv = 'P-256';
-                if (!tools.isDefined(options.format)) options.format = 'raw';
-                if (!tools.isDefined(options.type)) options.type = 'public';
-                var importDataObj;
-                var keyCapabilities = [];
-                if (options.format == 'jwk') {
-                    if (!tools.isDefined(options.x) ||
-                        !tools.isDefined(options.y) ||
-                        !tools.isDefined(options.d)) {
-                        console.error('x, y and d parameters are required to import an ECDH key.');
-                        return;
-                    }
-                    importDataObj = {
-                        kty: 'EC',
-                        crv: options.crv,
-                        x: options.x,
-                        y: options.y,
-                        d: options.d,
-                        ext: true
-                    }
-                    if (options.type == 'private')
-                        keyCapabilities = ['deriveKey', 'deriveBits'];
-                } else {
-                    if (!tools.isDefined(options.raw)) {
-                        console.error('raw parameter is missing.');
-                        return;
-                    }
-                    importDataObj = tools.HSToAB(options.raw);
-                }
-                var promise = new Promise(function (resolve, reject) {
-                    crypto.subtle.importKey(
-                        options.format,
-                        importDataObj,
-                        {
-                            name: 'ECDH',
-                            namedCurve: options.crv
-                        },
-                        true,
-                        keyCapabilities
-                    )
-                        .then(key => {
-                            var gRaw, gJwk;
-                            crypto.subtle.exportKey('jwk', key).then(
-                                eJwk => {
-                                    gJwk = eJwk;
-                                    crypto.subtle.exportKey('raw', key).then(
-                                        eRaw => {
-                                            gRaw = eRaw;
-                                            keys.push({
-                                                class: 'ECDH',
-                                                type: options.type,
-                                                name: options.name,
-                                                key: { publicKey: key },
-                                                jwk: gJwk,
-                                                raw: gRaw
-                                            });
-                                            if (getKey(options.name) != -1) {
-                                                resolve(options.name);
-                                            } else {
-                                                reject('key was not added to storage.');
-                                            }
+            }
+            if (!tools.isDefined(options.name)) {
+                console.error('key name is required for generating.');
+                return;
+            }
+            if (getKey(options.name) != -1) {
+                console.error('key name "', options.name, '" already in use.');
+                return;
+            }
+            if (!tools.isDefined(options.namedCurve)) {
+                options.namedCurve = 'P-256'
+            }
+            if (!tools.isDefined(options.type)) {
+                options.type = 'private'
+            }
+            if (!(options.type == 'private' ||
+                options.type == 'public' ||
+                options.type == 'mixed')) {
+                console.error('invalid key type (private, public, mixed).');
+                return;
+            }
+            // == Crear Promesa
+            var promise = new Promise(function (resolve, reject) {
+                // == Crear Llave
+                crypto.subtle.generateKey(
+                    {
+                        name: 'ECDH',
+                        namedCurve: options.namedCurve
+                    },
+                    true,
+                    ['deriveKey', 'deriveBits']
+                )
+                    .then(
+                    key => {
+                        var gRaw, gJwk;
+                        crypto.subtle.exportKey('jwk', key.publicKey).then(
+                            eJwk => {
+                                gJwk = eJwk;
+                                crypto.subtle.exportKey('raw', key.publicKey).then(
+                                    eRaw => {
+                                        gRaw = eRaw;
+                                        keys.push({
+                                            class: 'ECDH',
+                                            type: options.type,
+                                            name: options.name,
+                                            key: key,
+                                            jwk: gJwk,
+                                            raw: gRaw
+                                        });
+                                        if (getKey(options.name) != -1) {
+                                            if (!tools.isDefined(defaultKey)) defaultKey = options.name;
+                                            resolve(options.name);
+                                        } else {
+                                            reject('key was not added to storage.');
                                         }
-                                    )
-                                }
-                            )
-                        })
-                        .catch(
-                        err => {
-                            console.error('error importing key: ', err, ' check the input options.');
-                            reject('error catched.');
-                        });
-                });
-                promise.success = function (fn) {
-                    promise.then(function (name) {
-                        fn(name);
-                    });
-                    return promise;
-                }
-                promise.error = function (fn) {
-                    promise.then(null, function (name) {
-                        fn(name);
-                    });
-                    return promise;
-                }
-                return promise;
-            },
-            generateKey: function (options) {
-                if (tools.isDefined(options.random)) {
-                    if (options.random) {
-                        options.name = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
-                    }
-                }
-                if (!tools.isDefined(options.name)) {
-                    console.error('key name is required for generating.');
-                    return;
-                }
-                if (getKey(options.name) != -1) {
-                    console.error('key name "', options.name, '" already in use.');
-                    return;
-                }
-                if (!tools.isDefined(options.namedCurve)) {
-                    options.namedCurve = 'P-256'
-                }
-                if (!tools.isDefined(options.type)) {
-                    options.type = 'private'
-                }
-                if (!(options.type == 'private' ||
-                    options.type == 'public' ||
-                    options.type == 'mixed')) {
-                    console.error('invalid key type (private, public, mixed).');
-                    return;
-                }
-                // == Crear Promesa
-                var promise = new Promise(function (resolve, reject) {
-                    // == Crear Llave
-                    crypto.subtle.generateKey(
-                        {
-                            name: 'ECDH',
-                            namedCurve: options.namedCurve
-                        },
-                        true,
-                        ['deriveKey', 'deriveBits']
-                    )
-                        .then(
-                        key => {
-                            var gRaw, gJwk;
-                            crypto.subtle.exportKey('jwk', key.publicKey).then(
-                                eJwk => {
-                                    gJwk = eJwk;
-                                    crypto.subtle.exportKey('raw', key.publicKey).then(
-                                        eRaw => {
-                                            gRaw = eRaw;
-                                            keys.push({
-                                                class: 'ECDH',
-                                                type: options.type,
-                                                name: options.name,
-                                                key: key,
-                                                jwk: gJwk,
-                                                raw: gRaw
-                                            });
-                                            if (getKey(options.name) != -1) {
-                                                if (!tools.isDefined(defaultKey)) defaultKey = options.name;
-                                                resolve(options.name);
-                                            } else {
-                                                reject('key was not added to storage.');
-                                            }
-                                        }
-                                    )
-                                }
-                            )
-                        }
-                        )
-                        .catch(function (err) {
-                            reject(err);
-                        });
-                });
-                promise.success = function (fn) {
-                    promise.then(function (name) {
-                        fn(name);
-                    });
-                    return promise;
-                }
-                promise.error = function (fn) {
-                    promise.then(null, function (name) {
-                        fn(name);
-                    });
-                    return promise;
-                }
-                return promise;
-            },
-            exportKey: function (options) {
-                // == Chequeo
-                if (tools.isDefined(options.default)) {
-                    if (options.default)
-                        if (tools.isDefined(defaultKey)) {
-                            options.name = defaultKey;
-                        } else {
-                            console.error('default key is not defined.');
-                            return;
-                        }
-                }
-                if (!tools.isDefined(options.name)) {
-                    console.error('key name is required for exporting keys.');
-                    return;
-                }
-                if (getKey(options.name) == -1) {
-                    console.error('Key "', options.name, '" not found.');
-                    return;
-                }
-                // == Defectos
-                if (!tools.isDefined(options.type)) {
-                    options.type = 'raw';
-                }
-                if (options.type == 'jwk')
-                    if (tools.isDefined(getKey(options.name).jwk))
-                        return getKey(options.name).jwk;
-                    else {
-                        console.error('the key "', options.name, '" cannot be exported.');
-                        return;
-                    }
-                else if (options.type == 'raw')
-                    if (tools.isDefined(getKey(options.name).raw))
-                        return tools.ABToHS(new Uint8Array(getKey(options.name).raw));
-                    else {
-                        console.error('the key "', options.name, '" cannot be exported.');
-                        return;
-                    }
-                else {
-                    console.error('invalid export type');
-                    return;
-                }
-            },
-            derive: function (options) {
-                // == Chequeo de errores
-                if (!tools.isDefined(options.name)) {
-                    console.error('key name is required for deriving ECDH keys.');
-                    return;
-                }
-                if (getCryptoKey(options.name) != -1) {
-                    console.error('key name "', options.name, '" already in use.');
-                    return;
-                }
-                if (!tools.isDefined(options.privateKeyName) ||
-                    !tools.isDefined(options.publicKeyName)) {
-                    console.error('deriving keys require two previously stored keys.');
-                    return;
-                }
-                if (getKey(options.privateKeyName) == -1) {
-                    console.error('private key "', options.privateKeyName, '" not found.');
-                    return;
-                }
-                if (getKey(options.publicKeyName) == -1) {
-                    console.error('public key "', options.publicKeyName, '" not found.');
-                    return;
-                }
-                if (getKey(options.privateKeyName).type != 'mixed') {
-                    if (getKey(options.privateKeyName).type != 'private') {
-                        console.error('key "', options.privateKeyName, '" is not a valid private key.');
-                        return;
-                    }
-                    if (getKey(options.publicKeyName).type != 'public') {
-                        console.error('key "', options.publicKeyName, '" is not a valid public key.');
-                        return;
-                    }
-                }
-                // == Establecer defectos si no se han definido.            
-                if (!tools.isDefined(options.targetClass)) {
-                    options.targetClass = 'AES-GCM';
-                }
-                if (!tools.isDefined(options.targetLength)) {
-                    options.targetLength = 256;
-                }
-                if (!tools.isDefined(options.namedCurve)) {
-                    options.namedCurve = 'P-256';
-                }
-                if (!tools.isDefined(options.exportable)) {
-                    options.exportable = false;
-                }
-                //console.log('public', getKey(options.publicKeyName).key);
-                // == Derivacion
-                var promise = new Promise(function (resolve, reject) {
-                    crypto.subtle.deriveKey(
-                        {
-                            name: 'ECDH',
-                            namedCurve: options.namedCurve,
-                            public: getKey(options.publicKeyName).key.publicKey
-                        },
-                        getKey(options.privateKeyName).key.privateKey,
-                        {
-                            name: options.targetClass,
-                            length: options.targetLength
-                        },
-                        options.exportable,
-                        ['encrypt', 'decrypt']
-                    )
-                        .then(
-                        key => {
-                            key = { publicKey: key };
-                            if (options.exportable) {
-                                var gRaw, gJwk;
-                                crypto.subtle.exportKey('jwk', key.publicKey).then(
-                                    eJwk => {
-                                        gJwk = eJwk;
-                                        crypto.subtle.exportKey('raw', key.publicKey).then(
-                                            eRaw => {
-                                                gRaw = eRaw;
-                                                cryptoKeys.push({
-                                                    class: options.targetClass,
-                                                    type: 'private',
-                                                    name: options.name,
-                                                    key: key,
-                                                    jwk: gJwk,
-                                                    raw: gRaw
-                                                });
-                                                if (getCryptoKey(options.name) != -1) {
-                                                    if (!tools.isDefined(defaultCryptoKey)) defaultCryptoKey = options.name;
-                                                    resolve(options.name);
-                                                } else {
-                                                    reject('key was not added to storage.');
-                                                }
-                                            }
-                                        )
                                     }
                                 )
-                                    .catch(function (err) {
-                                        console.error('error exporting derived key: ', err, '.');
-                                        reject(err);
-                                    });
-                            } else {
-                                cryptoKeys.push({
-                                    class: options.targetClass,
-                                    type: 'private',
-                                    name: options.name,
-                                    key: key,
-                                    jwk: null,
-                                    raw: null
-                                });
-                                if (getCryptoKey(options.name) != -1) {
-                                    if (!tools.isDefined(defaultCryptoKey)) defaultCryptoKey = options.name;
-                                    resolve(options.name);
-                                } else {
-                                    reject('key was not added to storage.');
-                                }
                             }
-                        }
                         )
-                        .catch(err => {
-                            console.log('error deriving key: ', err, '.');
-                            reject(err);
-                        });
-                });
-                promise.success = function (fn) {
-                    promise.then(function (name) {
-                        fn(name);
-                    });
-                    return promise;
-                }
-                promise.error = function (fn) {
-                    promise.then(null, function (name) {
-                        fn(name);
-                    });
-                    return promise;
-                }
-                return promise;
-            },
-            encrypt: function (options) {
-                if (tools.isDefined(options.default)) {
-                    if (options.default)
-                        if (tools.isDefined(defaultCryptoKey)) {
-                            options.name = defaultCryptoKey;
-                        } else {
-                            console.error('default key is not defined.');
-                            return;
-                        }
-                }
-                // == Verificacion de errores
-                if (!tools.isDefined(options.name)) {
-                    console.error('key name is required for deriving ECDH keys.');
-                    return;
-                }
-                if (!tools.isDefined(options.data)) {
-                    console.error('data option must be defined and not null.');
-                    return;
-                }
-                // == Obtener llave
-                if (getCryptoKey(options.name) == -1) {
-                    console.error('Key "', options.name, '" not found.');
-                    return;
-                }
-                // == Validar capacidad de la llave
-                if (getCryptoKey(options.name).class == 'ECDH') {
-                    console.error('Key "', options.name, '" is not valid for encryption.');
-                    return;
-                }
-                // == Defectos
-                if (!tools.isDefined(options.tagLength)) {
-                    options.tagLength = 128;
-                }
-                // == IV (vector de inicializacion)
-                var encIV = crypto.getRandomValues(new Uint8Array(12));
-                // == Promesa
-                var promise = new Promise(function (resolve, reject) {
-                    // == Cifrar
-                    crypto.subtle.encrypt(
-                        {
-                            name: getCryptoKey(options.name).class,
-                            iv: encIV,
-                            tagLength: options.tagLength
-                        },
-                        getCryptoKey(options.name).key.publicKey,
-                        tools.StringtoAB(options.data)
+                    }
                     )
-                        .then(function (encrypted) {
-                            var data = {
-                                encrypted: tools.ABToHS(new Uint8Array(encrypted)),
-                                iv: tools.ABToHS(encIV)
-                            };
-                            // == Ejecutar promesa
-                            resolve(data);
-                        });
+                    .catch(function (err) {
+                        reject(err);
+                    });
+            });
+            promise.success = function (fn) {
+                promise.then(function (name) {
+                    fn(name);
                 });
-                promise.success = function (fn) {
-                    promise.then(function (data) {
-                        fn(data.encrypted, data.iv);
-                    });
-                    return promise;
-                }
-                promise.error = function (fn) {
-                    promise.then(null, function (name) {
-                        fn(name);
-                    });
-                    return promise;
-                }
                 return promise;
-            },
-            decrypt: function (options) {
-                if (tools.isDefined(options.default)) {
-                    if (options.default)
-                        if (tools.isDefined(defaultCryptoKey)) {
-                            options.name = defaultCryptoKey;
-                        } else {
-                            console.error('default key is not defined.');
-                            return;
-                        }
-                }
-                // == Comprobacion
-                if (!tools.isDefined(options.name)) {
-                    console.error('key name is required for decrypting.');
+            }
+            promise.error = function (fn) {
+                promise.then(null, function (name) {
+                    fn(name);
+                });
+                return promise;
+            }
+            return promise;
+        }
+        this.getDefaultKeys = function () {
+            return {
+                ecdh: defaultKey,
+                crypto: defaultCryptoKey
+            }
+        }
+        this.checkKey = function (kName) {
+            return getKey(kName) != -1;
+        }
+        this.checkCryptoKey = function (kName) {
+            return getCryptoKey(kName) != -1;
+        }
+        this.importKey = function (options) {
+            if (!tools.isDefined(options.name)) {
+                console.error('key name is required for importing.');
+                return;
+            }
+            if (getKey(options.name) != -1) {
+                console.error('key name "', options.name, '" already in use.');
+                return;
+            }
+            if (!tools.isDefined(options.crv)) options.crv = 'P-256';
+            if (!tools.isDefined(options.format)) options.format = 'raw';
+            if (!tools.isDefined(options.type)) options.type = 'public';
+            var importDataObj;
+            var keyCapabilities = [];
+            if (options.format == 'jwk') {
+                if (!tools.isDefined(options.x) ||
+                    !tools.isDefined(options.y) ||
+                    !tools.isDefined(options.d)) {
+                    console.error('x, y and d parameters are required to import an ECDH key.');
                     return;
                 }
-                if (!tools.isDefined(options.iv)) {
-                    console.error('the iv is required for decrypting.');
+                importDataObj = {
+                    kty: 'EC',
+                    crv: options.crv,
+                    x: options.x,
+                    y: options.y,
+                    d: options.d,
+                    ext: true
+                }
+                if (options.type == 'private')
+                    keyCapabilities = ['deriveKey', 'deriveBits'];
+            } else {
+                if (!tools.isDefined(options.raw)) {
+                    console.error('raw parameter is missing.');
                     return;
                 }
-                if (!tools.isDefined(options.data)) {
-                    console.error('data option must be defined and not null.');
-                    return;
-                }
-                // == Obtener llave
-                if (getCryptoKey(options.name) == -1) {
-                    console.error('Key "', options.name, '" not found.');
-                    return;
-                }
-                // == Validar capacidad de la llave
-                if (getCryptoKey(options.name).class == 'ECDH') {
-                    console.error('Key "', options.name, '" is not valid for encryption.');
-                    return;
-                }
-                // == Defectos
-                if (!tools.isDefined(options.tagLength)) {
-                    options.tagLength = 128;
-                }
-                var promise = new Promise(function (resolve, reject) {
-                    crypto.subtle.decrypt(
-                        {
-                            name: getCryptoKey(options.name).class,
-                            iv: tools.HSToAB(options.iv),
-                            tagLength: options.tagLength
-                        },
-                        getCryptoKey(options.name).key.publicKey,
-                        tools.HSToAB(options.data)
-                    )
-                        .then(
-                        dec => {
-                            data = {
-                                decrypted: tools.ABtoString(new Uint8Array(dec))
+                importDataObj = tools.HSToAB(options.raw);
+            }
+            var promise = new Promise(function (resolve, reject) {
+                crypto.subtle.importKey(
+                    options.format,
+                    importDataObj,
+                    {
+                        name: 'ECDH',
+                        namedCurve: options.crv
+                    },
+                    true,
+                    keyCapabilities
+                )
+                    .then(key => {
+                        var gRaw, gJwk;
+                        crypto.subtle.exportKey('jwk', key).then(
+                            eJwk => {
+                                gJwk = eJwk;
+                                crypto.subtle.exportKey('raw', key).then(
+                                    eRaw => {
+                                        gRaw = eRaw;
+                                        keys.push({
+                                            class: 'ECDH',
+                                            type: options.type,
+                                            name: options.name,
+                                            key: { publicKey: key },
+                                            jwk: gJwk,
+                                            raw: gRaw
+                                        });
+                                        if (getKey(options.name) != -1) {
+                                            resolve(options.name);
+                                        } else {
+                                            reject('key was not added to storage.');
+                                        }
+                                    }
+                                )
                             }
-                            resolve(data);
-                        }
                         )
-                        .catch(
-                        err => {
-                            reject(err);
-                        }
-                        )
+                    })
+                    .catch(
+                    err => {
+                        console.error('error importing key: ', err, ' check the input options.');
+                        reject('error catched.');
+                    });
+            });
+            promise.success = function (fn) {
+                promise.then(function (name) {
+                    fn(name);
                 });
-                promise.success = function (fn) {
-                    promise.then(function (data) {
-                        fn(data.decrypted);
-                    });
-                    return promise;
-                }
-                promise.error = function (fn) {
-                    promise.then(null, function (name) {
-                        fn(name);
-                    });
-                    return promise;
-                }
                 return promise;
+            }
+            promise.error = function (fn) {
+                promise.then(null, function (name) {
+                    fn(name);
+                });
+                return promise;
+            }
+            return promise;
+        }
+        // == Servicio
+        this.$get = function () {
+            var $webCryptoProvider = this;
+            return {
+
             }
         }
     })
-    .factory('$webCrypto', function ($webCryptoProvider, $injector) {
+    .provider('$webCryptoX', function ($injector) {
+        this.$get = function () {
+            var tools = this.tools;
+            return {
+                exportKey: function (options) {
+                    // == Chequeo
+                    if (tools.isDefined(options.default)) {
+                        if (options.default)
+                            if (tools.isDefined(defaultKey)) {
+                                options.name = defaultKey;
+                            } else {
+                                console.error('default key is not defined.');
+                                return;
+                            }
+                    }
+                    if (!tools.isDefined(options.name)) {
+                        console.error('key name is required for exporting keys.');
+                        return;
+                    }
+                    if (getKey(options.name) == -1) {
+                        console.error('Key "', options.name, '" not found.');
+                        return;
+                    }
+                    // == Defectos
+                    if (!tools.isDefined(options.type)) {
+                        options.type = 'raw';
+                    }
+                    if (options.type == 'jwk')
+                        if (tools.isDefined(getKey(options.name).jwk))
+                            return getKey(options.name).jwk;
+                        else {
+                            console.error('the key "', options.name, '" cannot be exported.');
+                            return;
+                        }
+                    else if (options.type == 'raw')
+                        if (tools.isDefined(getKey(options.name).raw))
+                            return tools.ABToHS(new Uint8Array(getKey(options.name).raw));
+                        else {
+                            console.error('the key "', options.name, '" cannot be exported.');
+                            return;
+                        }
+                    else {
+                        console.error('invalid export type');
+                        return;
+                    }
+                },
+                derive: function (options) {
+                    // == Chequeo de errores
+                    if (!tools.isDefined(options.name)) {
+                        console.error('key name is required for deriving ECDH keys.');
+                        return;
+                    }
+                    if (getCryptoKey(options.name) != -1) {
+                        console.error('key name "', options.name, '" already in use.');
+                        return;
+                    }
+                    if (!tools.isDefined(options.privateKeyName) ||
+                        !tools.isDefined(options.publicKeyName)) {
+                        console.error('deriving keys require two previously stored keys.');
+                        return;
+                    }
+                    if (getKey(options.privateKeyName) == -1) {
+                        console.error('private key "', options.privateKeyName, '" not found.');
+                        return;
+                    }
+                    if (getKey(options.publicKeyName) == -1) {
+                        console.error('public key "', options.publicKeyName, '" not found.');
+                        return;
+                    }
+                    if (getKey(options.privateKeyName).type != 'mixed') {
+                        if (getKey(options.privateKeyName).type != 'private') {
+                            console.error('key "', options.privateKeyName, '" is not a valid private key.');
+                            return;
+                        }
+                        if (getKey(options.publicKeyName).type != 'public') {
+                            console.error('key "', options.publicKeyName, '" is not a valid public key.');
+                            return;
+                        }
+                    }
+                    // == Establecer defectos si no se han definido.            
+                    if (!tools.isDefined(options.targetClass)) {
+                        options.targetClass = 'AES-GCM';
+                    }
+                    if (!tools.isDefined(options.targetLength)) {
+                        options.targetLength = 256;
+                    }
+                    if (!tools.isDefined(options.namedCurve)) {
+                        options.namedCurve = 'P-256';
+                    }
+                    if (!tools.isDefined(options.exportable)) {
+                        options.exportable = false;
+                    }
+                    //console.log('public', getKey(options.publicKeyName).key);
+                    // == Derivacion
+                    var promise = new Promise(function (resolve, reject) {
+                        crypto.subtle.deriveKey(
+                            {
+                                name: 'ECDH',
+                                namedCurve: options.namedCurve,
+                                public: getKey(options.publicKeyName).key.publicKey
+                            },
+                            getKey(options.privateKeyName).key.privateKey,
+                            {
+                                name: options.targetClass,
+                                length: options.targetLength
+                            },
+                            options.exportable,
+                            ['encrypt', 'decrypt']
+                        )
+                            .then(
+                            key => {
+                                key = { publicKey: key };
+                                if (options.exportable) {
+                                    var gRaw, gJwk;
+                                    crypto.subtle.exportKey('jwk', key.publicKey).then(
+                                        eJwk => {
+                                            gJwk = eJwk;
+                                            crypto.subtle.exportKey('raw', key.publicKey).then(
+                                                eRaw => {
+                                                    gRaw = eRaw;
+                                                    cryptoKeys.push({
+                                                        class: options.targetClass,
+                                                        type: 'private',
+                                                        name: options.name,
+                                                        key: key,
+                                                        jwk: gJwk,
+                                                        raw: gRaw
+                                                    });
+                                                    if (getCryptoKey(options.name) != -1) {
+                                                        if (!tools.isDefined(defaultCryptoKey)) defaultCryptoKey = options.name;
+                                                        resolve(options.name);
+                                                    } else {
+                                                        reject('key was not added to storage.');
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    )
+                                        .catch(function (err) {
+                                            console.error('error exporting derived key: ', err, '.');
+                                            reject(err);
+                                        });
+                                } else {
+                                    cryptoKeys.push({
+                                        class: options.targetClass,
+                                        type: 'private',
+                                        name: options.name,
+                                        key: key,
+                                        jwk: null,
+                                        raw: null
+                                    });
+                                    if (getCryptoKey(options.name) != -1) {
+                                        if (!tools.isDefined(defaultCryptoKey)) defaultCryptoKey = options.name;
+                                        resolve(options.name);
+                                    } else {
+                                        reject('key was not added to storage.');
+                                    }
+                                }
+                            }
+                            )
+                            .catch(err => {
+                                console.log('error deriving key: ', err, '.');
+                                reject(err);
+                            });
+                    });
+                    promise.success = function (fn) {
+                        promise.then(function (name) {
+                            fn(name);
+                        });
+                        return promise;
+                    }
+                    promise.error = function (fn) {
+                        promise.then(null, function (name) {
+                            fn(name);
+                        });
+                        return promise;
+                    }
+                    return promise;
+                },
+                encrypt: function (options) {
+                    if (tools.isDefined(options.default)) {
+                        if (options.default)
+                            if (tools.isDefined(defaultCryptoKey)) {
+                                options.name = defaultCryptoKey;
+                            } else {
+                                console.error('default key is not defined.');
+                                return;
+                            }
+                    }
+                    // == Verificacion de errores
+                    if (!tools.isDefined(options.name)) {
+                        console.error('key name is required for deriving ECDH keys.');
+                        return;
+                    }
+                    if (!tools.isDefined(options.data)) {
+                        console.error('data option must be defined and not null.');
+                        return;
+                    }
+                    // == Obtener llave
+                    if (getCryptoKey(options.name) == -1) {
+                        console.error('Key "', options.name, '" not found.');
+                        return;
+                    }
+                    // == Validar capacidad de la llave
+                    if (getCryptoKey(options.name).class == 'ECDH') {
+                        console.error('Key "', options.name, '" is not valid for encryption.');
+                        return;
+                    }
+                    // == Defectos
+                    if (!tools.isDefined(options.tagLength)) {
+                        options.tagLength = 128;
+                    }
+                    // == IV (vector de inicializacion)
+                    var encIV = crypto.getRandomValues(new Uint8Array(12));
+                    // == Promesa
+                    var promise = new Promise(function (resolve, reject) {
+                        // == Cifrar
+                        crypto.subtle.encrypt(
+                            {
+                                name: getCryptoKey(options.name).class,
+                                iv: encIV,
+                                tagLength: options.tagLength
+                            },
+                            getCryptoKey(options.name).key.publicKey,
+                            tools.StringtoAB(options.data)
+                        )
+                            .then(function (encrypted) {
+                                var data = {
+                                    encrypted: tools.ABToHS(new Uint8Array(encrypted)),
+                                    iv: tools.ABToHS(encIV)
+                                };
+                                // == Ejecutar promesa
+                                resolve(data);
+                            });
+                    });
+                    promise.success = function (fn) {
+                        promise.then(function (data) {
+                            fn(data.encrypted, data.iv);
+                        });
+                        return promise;
+                    }
+                    promise.error = function (fn) {
+                        promise.then(null, function (name) {
+                            fn(name);
+                        });
+                        return promise;
+                    }
+                    return promise;
+                },
+                decrypt: function (options) {
+                    if (tools.isDefined(options.default)) {
+                        if (options.default)
+                            if (tools.isDefined(defaultCryptoKey)) {
+                                options.name = defaultCryptoKey;
+                            } else {
+                                console.error('default key is not defined.');
+                                return;
+                            }
+                    }
+                    // == Comprobacion
+                    if (!tools.isDefined(options.name)) {
+                        console.error('key name is required for decrypting.');
+                        return;
+                    }
+                    if (!tools.isDefined(options.iv)) {
+                        console.error('the iv is required for decrypting.');
+                        return;
+                    }
+                    if (!tools.isDefined(options.data)) {
+                        console.error('data option must be defined and not null.');
+                        return;
+                    }
+                    // == Obtener llave
+                    if (getCryptoKey(options.name) == -1) {
+                        console.error('Key "', options.name, '" not found.');
+                        return;
+                    }
+                    // == Validar capacidad de la llave
+                    if (getCryptoKey(options.name).class == 'ECDH') {
+                        console.error('Key "', options.name, '" is not valid for encryption.');
+                        return;
+                    }
+                    // == Defectos
+                    if (!tools.isDefined(options.tagLength)) {
+                        options.tagLength = 128;
+                    }
+                    var promise = new Promise(function (resolve, reject) {
+                        crypto.subtle.decrypt(
+                            {
+                                name: getCryptoKey(options.name).class,
+                                iv: tools.HSToAB(options.iv),
+                                tagLength: options.tagLength
+                            },
+                            getCryptoKey(options.name).key.publicKey,
+                            tools.HSToAB(options.data)
+                        )
+                            .then(
+                            dec => {
+                                data = {
+                                    decrypted: tools.ABtoString(new Uint8Array(dec))
+                                }
+                                resolve(data);
+                            }
+                            )
+                            .catch(
+                            err => {
+                                reject(err);
+                            }
+                            )
+                    });
+                    promise.success = function (fn) {
+                        promise.then(function (data) {
+                            fn(data.decrypted);
+                        });
+                        return promise;
+                    }
+                    promise.error = function (fn) {
+                        promise.then(null, function (name) {
+                            fn(name);
+                        });
+                        return promise;
+                    }
+                    return promise;
+                }
+            }
+        }
+    })
+    .factory('$webCryptoS', function ($webCryptoProvider, $injector) {
         var tools = $injector.instantiate(NgWebCryptoUtils);
         return {
             tools: {
-                ArrayBufferToHexString: function(ab) {
+                ArrayBufferToHexString: function (ab) {
                     return tools.ABToHS(ab);
                 },
-                HexStringToArrayBuffer: function(hs) {
+                HexStringToArrayBuffer: function (hs) {
                     return tools.HSToAB(hs);
                 },
-                ArrayBufferToString: function(ab) {
+                ArrayBufferToString: function (ab) {
                     return tools.ABtoString(ab);
                 },
-                StringToArrayBuffer: function(str) {
+                StringToArrayBuffer: function (str) {
                     return tools.StringtoAB(str);
                 }
             },
@@ -677,7 +701,7 @@ angular.module('ngWebCrypto')
                     console.error('No default ECDH key defined.');
                 }
             },
-            importAndDerive: function(name, raw) {
+            importAndDerive: function (name, raw) {
                 var importName = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
                 var rsaKeyName = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
                 var promise = new Promise(function (resolve, reject) {
@@ -687,18 +711,18 @@ angular.module('ngWebCrypto')
                             raw: raw
                         }
                     )
-                    .success(function (importedKeyName) {
-                        $webCryptoProvider.derive(
-                            {
-                                name: rsaKeyName,
-                                privateKeyName: name,
-                                publicKeyName: importedKeyName
-                            }
-                        )
-                        .success(function (derivedKeyName) {
-                            resolve(derivedKeyName);
+                        .success(function (importedKeyName) {
+                            $webCryptoProvider.derive(
+                                {
+                                    name: rsaKeyName,
+                                    privateKeyName: name,
+                                    publicKeyName: importedKeyName
+                                }
+                            )
+                                .success(function (derivedKeyName) {
+                                    resolve(derivedKeyName);
+                                });
                         });
-                    });
                 });
                 promise.success = function (fn) {
                     promise.then(function (data) {
@@ -715,7 +739,7 @@ angular.module('ngWebCrypto')
                 return promise;
             },
             export: function (name) {
-                return $webCryptoProvider.exportKey({name: name});
+                return $webCryptoProvider.exportKey({ name: name });
             },
             exportDefaultKey: function () {
                 return $webCryptoProvider.exportKey({ default: true });
@@ -734,7 +758,7 @@ angular.module('ngWebCrypto')
             }
         }
     })
-    .factory('$httpCrypto', function ($webCryptoProvider, $webCrypto, $http, $injector) {
+    .factory('$httpCryptoS', function ($webCryptoProvider, $webCrypto, $http, $injector) {
         //This service is a WIP part, not tested but should be functional, requires a compatible
         //server.
         var tools = $injector.instantiate(NgWebCryptoUtils);
@@ -772,7 +796,7 @@ angular.module('ngWebCrypto')
                                 var encData = {
                                     data: encrypted,
                                     iv: iv
-                                }                               
+                                }
                                 $http.post(
                                     server,
                                     {
