@@ -1,6 +1,6 @@
 {
   "name": "angular-web-crypto",
-  "version": "0.0.3",
+  "version": "0.0.3-beta",
   "description": "Web Cryptography API bindings for AngularJS",
   "main": "ng-web-crypto.js",
   "dependencies": {
