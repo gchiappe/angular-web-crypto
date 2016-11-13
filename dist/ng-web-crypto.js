@@ -78,7 +78,7 @@ var NgWebCryptoUtils = (function () {
 })();
 angular.module('ngWebCrypto', []);
 angular.module('ngWebCrypto')
-    .provider('$webCrypto', $injector => {
+    .provider('$webCrypto', function ($injector) {
         var crypto = window.crypto;
         if (!crypto.subtle) {
             throw 'ng-web-crypto: browser not supported.';

@@ -79,6 +79,8 @@ var NgWebCryptoUtils = function () {
 }();
 angular.module('ngWebCrypto', []);
 angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
+    var _this = this;
+
     var crypto = window.crypto;
     if (!crypto.subtle) {
         throw 'ng-web-crypto: browser not supported.';
@@ -108,7 +110,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
     var defaultKey = null,
         defaultCryptoKey = null;
     // Funciones del proveedor:
-    undefined.generateKey = function (options) {
+    this.generateKey = function (options) {
         if (tools.isDefined(options.random)) {
             if (options.random) {
                 options.name = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
@@ -178,24 +180,24 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
         };
         return promise;
     };
-    undefined.getDefaultKeys = function () {
+    this.getDefaultKeys = function () {
         return {
             ecdh: defaultKey,
             crypto: defaultCryptoKey
         };
     };
-    undefined.checkKey = function (kName) {
+    this.checkKey = function (kName) {
         return getKey(kName) != -1;
     };
-    undefined.checkCryptoKey = function (kName) {
+    this.checkCryptoKey = function (kName) {
         return getCryptoKey(kName) != -1;
     };
-    undefined.importKey = function (options) {
+    this.importKey = function (options) {
         if (!tools.isDefined(options.name)) {
             console.error('key name is required for importing.');
             return;
         }
-        if (undefined.checkKey(options.name)) {
+        if (_this.checkKey(options.name)) {
             console.error('key name "', options.name, '" already in use.');
             return;
         }
@@ -268,7 +270,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
         };
         return promise;
     };
-    undefined.exportKey = function (options) {
+    this.exportKey = function (options) {
         // == Chequeo
         if (tools.isDefined(options.default)) {
             if (options.default) if (tools.isDefined(defaultKey)) {
@@ -305,7 +307,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             return;
         }
     };
-    undefined.derive = function (options) {
+    this.derive = function (options) {
         // == Chequeo de errores
         if (!tools.isDefined(options.name)) {
             console.error('key name is required for deriving ECDH keys.');
@@ -422,7 +424,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
         };
         return promise;
     };
-    undefined.encrypt = function (options) {
+    this.encrypt = function (options) {
         if (tools.isDefined(options.default)) {
             if (options.default) if (tools.isDefined(defaultCryptoKey)) {
                 options.name = defaultCryptoKey;
@@ -486,7 +488,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
         };
         return promise;
     };
-    undefined.decrypt = function (options) {
+    this.decrypt = function (options) {
         if (tools.isDefined(options.default)) {
             if (options.default) if (tools.isDefined(defaultCryptoKey)) {
                 options.name = defaultCryptoKey;
@@ -551,8 +553,8 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
         return promise;
     };
     // == Servicio
-    undefined.$get = function () {
-        var $webCryptoProvider = undefined;
+    this.$get = function () {
+        var $webCryptoProvider = _this;
         return {
             tools: {
                 ArrayBufferToHexString: function ArrayBufferToHexString(ab) {
