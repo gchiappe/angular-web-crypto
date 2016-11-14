@@ -2,8 +2,7 @@ var gulp = require("gulp"),
     babel = require("gulp-babel"),
     uglify = require('gulp-uglify'),
     ngAnnotate = require('gulp-ng-annotate'),
-    sourcemaps = require('gulp-sourcemaps'),
-    concat = require('gulp-concat'),
+    sourcemaps = require('gulp-sourcemaps')
     rename = require('gulp-rename');
 
 gulp.task('es6', function() {
