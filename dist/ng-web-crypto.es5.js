@@ -77,6 +77,19 @@ var NgWebCryptoUtils = function () {
     }
     return NgWebCryptoUtils;
 }();
+var webCryptoConstants = {
+    classes: {
+        ECDH: 'ECDH',
+        AESGCM: 'AES-GCM'
+    },
+    namedCurve: {
+        P256: 'P-256'
+    },
+    format: {
+        RAW: 'raw',
+        JWK: 'jwk'
+    }
+};
 angular.module('ngWebCrypto', []);
 angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
     var _this = this;
@@ -117,12 +130,10 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             }
         }
         if (!tools.isDefined(options.name)) {
-            console.error('key name is required for generating.');
-            return;
+            throw 'key name is required for generating.';
         }
         if (getKey(options.name) != -1) {
-            console.error('key name "', options.name, '" already in use.');
-            return;
+            throw 'key name "', options.name, '" already in use.';
         }
         if (!tools.isDefined(options.namedCurve)) {
             options.namedCurve = 'P-256';
@@ -131,8 +142,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             options.type = 'private';
         }
         if (!(options.type == 'private' || options.type == 'public' || options.type == 'mixed')) {
-            console.error('invalid key type (private, public, mixed).');
-            return;
+            throw 'invalid key type (private, public, mixed).';
         }
         // == Crear Promesa
         var promise = new Promise(function (resolve, reject) {
@@ -143,16 +153,14 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             }, true, ['deriveKey', 'deriveBits']).then(function (key) {
                 var gRaw, gJwk;
                 crypto.subtle.exportKey('jwk', key.publicKey).then(function (eJwk) {
-                    gJwk = eJwk;
                     crypto.subtle.exportKey('raw', key.publicKey).then(function (eRaw) {
-                        gRaw = eRaw;
                         keys.push({
                             class: 'ECDH',
                             type: options.type,
                             name: options.name,
                             key: key,
-                            jwk: gJwk,
-                            raw: gRaw
+                            jwk: eJwk,
+                            raw: eRaw
                         });
                         if (getKey(options.name) != -1) {
                             if (!tools.isDefined(defaultKey)) defaultKey = options.name;
@@ -194,19 +202,18 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
     };
     this.importKey = function (options) {
         if (!tools.isDefined(options.name)) {
-            console.error('key name is required for importing.');
-            return;
+            throw 'key name is required for importing.';
         }
         if (_this.checkKey(options.name)) {
-            console.error('key name "', options.name, '" already in use.');
-            return;
+            throw 'key name "', options.name, '" already in use.';
         }
-        if (!tools.isDefined(options.crv)) options.crv = 'P-256';
-        if (!tools.isDefined(options.format)) options.format = 'raw';
+        if (!tools.isDefined(options.class)) options.class = webCryptoConstants.classes.ECDH;
+        if (!tools.isDefined(options.crv)) options.crv = webCryptoConstants.namedCurve.P256;
+        if (!tools.isDefined(options.format)) options.format = webCryptoConstants.format.JWK;
         if (!tools.isDefined(options.type)) options.type = 'public';
         var importDataObj = void 0;
         var keyCapabilities = [];
-        if (options.format == 'jwk') {
+        if (options.format == webCryptoConstants.format.JWK) {
             if (!tools.isDefined(options.x) || !tools.isDefined(options.y) || !tools.isDefined(options.d)) {
                 throw 'x, y and d parameters are required to import an ECDH key.';
             }
@@ -230,19 +237,15 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                 name: 'ECDH',
                 namedCurve: options.crv
             }, true, keyCapabilities).then(function (key) {
-                var gRaw = void 0,
-                    gJwk = void 0;
                 crypto.subtle.exportKey('jwk', key).then(function (eJwk) {
-                    gJwk = eJwk;
                     crypto.subtle.exportKey('raw', key).then(function (eRaw) {
-                        gRaw = eRaw;
                         keys.push({
                             class: 'ECDH',
                             type: options.type,
                             name: options.name,
                             key: { publicKey: key },
-                            jwk: gJwk,
-                            raw: gRaw
+                            jwk: eJwk,
+                            raw: eRaw
                         });
                         if (getKey(options.name) != -1) {
                             resolve(options.name);
@@ -303,8 +306,74 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             throw 'invalid export type';
         }
     };
-    this.derive = function (options) {
-        // == Chequeo de errores
+    this.deriveBits = function (options) {
+        // == Chequeo de errores.
+        if (!tools.isDefined(options.name)) {
+            throw 'key name is required for deriving ECDH keys.';
+        }
+        if (getCryptoKey(options.name) != -1) {
+            throw 'key name "', options.name, '" already in use.';
+        }
+        if (!tools.isDefined(options.privateKeyName) || !tools.isDefined(options.publicKeyName)) {
+            throw 'deriving keys require two previously stored keys.';
+        }
+        // == Obtener las llaves y verificarlas.   
+        var privateKey = getKey(options.privateKeyName),
+            publicKey = getKey(options.publicKeyName);
+        if (privateKey == -1) {
+            throw 'private key "', options.privateKeyName, '" not found.';
+        }
+        if (publicKey == -1) {
+            throw 'public key "', options.publicKeyName, '" not found.';
+        }
+        if (privateKey.type != 'mixed') {
+            if (privateKey.type != 'private') {
+                throw 'key "', options.privateKeyName, '" is not a valid private key.';
+            }
+            if (publicKey.type != 'public') {
+                throw 'key "', options.publicKeyName, '" is not a valid public key.';
+            }
+        }
+        // == Establecer defectos si no se han definido.            
+        if (!tools.isDefined(options.bits)) {
+            options.bits = 256;
+        }
+        if (!tools.isDefined(options.format)) {
+            options.format = 'HS';
+        }
+        if (!tools.isDefined(options.namedCurve)) {
+            options.namedCurve = 'P-256';
+        }
+        // == Derivacion
+        var promise = new Promise(function (resolve, reject) {
+            crypto.subtle.deriveBits({
+                name: 'ECDH',
+                namedCurve: options.namedCurve,
+                public: publicKey.key.publicKey
+            }, privateKey, options.bits).then(function (bits) {
+                var out = new Uint8Array(bits);
+                resolve(tools.ABToHS(new Uint8Array(bits)));
+            }).catch(function (err) {
+                console.error('error deriving bits: ', err, '.');
+                reject(err);
+            });
+        });
+        promise.success = function (fn) {
+            promise.then(function (name) {
+                fn(name);
+            });
+            return promise;
+        };
+        promise.error = function (fn) {
+            promise.then(null, function (name) {
+                fn(name);
+            });
+            return promise;
+        };
+        return promise;
+    };
+    this.deriveKey = function (options) {
+        // == Chequeo de errores.
         if (!tools.isDefined(options.name)) {
             throw 'key name is required for deriving ECDH keys.';
         }
@@ -344,13 +413,16 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
         if (!tools.isDefined(options.exportable)) {
             options.exportable = false;
         }
-        //console.log('public', getKey(options.publicKeyName).key);
         // == Derivacion
         var promise = new Promise(function (resolve, reject) {
-            crypto.subtle.deriveKey({ name: 'ECDH',
+            crypto.subtle.deriveKey({
+                name: 'ECDH',
                 namedCurve: options.namedCurve,
-                public: publicKey.key.publicKey }, privateKey.key.privateKey, { name: options.targetClass,
-                length: options.targetLength }, options.exportable, ['encrypt', 'decrypt']).then(function (key) {
+                public: publicKey.key.publicKey
+            }, privateKey.key.privateKey, {
+                name: options.targetClass,
+                length: options.targetLength
+            }, options.exportable, ['encrypt', 'decrypt']).then(function (key) {
                 key = { publicKey: key };
                 if (options.exportable) {
                     crypto.subtle.exportKey('jwk', key.publicKey).then(function (eJwk) {
@@ -557,7 +629,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                 if (tools.isDefined(defKeys.ecdh)) {
                     var promise = new Promise(function (resolve, reject) {
                         _provider.importKey({ name: importName, raw: raw }).success(function (importedKeyName) {
-                            _provider.derive({ name: rsaKeyName, privateKeyName: defKeys.ecdh, publicKeyName: importedKeyName }).success(function (derivedKeyName) {
+                            _provider.deriveKey({ name: rsaKeyName, privateKeyName: defKeys.ecdh, publicKeyName: importedKeyName }).success(function (derivedKeyName) {
                                 resolve(derivedKeyName);
                             });
                         });
@@ -586,7 +658,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                 var rsaKeyName = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
                 var promise = new Promise(function (resolve, reject) {
                     _provider.importKey({ name: importName, raw: raw }).success(function (importedKeyName) {
-                        _provider.derive({ name: rsaKeyName, privateKeyName: name, publicKeyName: importedKeyName }).success(function (derivedKeyName) {
+                        _provider.deriveKey({ name: rsaKeyName, privateKeyName: name, publicKeyName: importedKeyName }).success(function (derivedKeyName) {
                             resolve(derivedKeyName);
                         });
                     });
