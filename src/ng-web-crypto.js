@@ -228,10 +228,11 @@ angular.module('ngWebCrypto')
                     if (!tools.isDefined(options.k)) {
                         throw 'k parameter is required to import an AES-GCM key (k paramter must be HexString encoded).'
                     }
-                    console.log('key', tools.HSToAB(options.k));
+                    // console.log('key', tools.HSToAB(options.k));
+                    // console.log('key (String)', btoa(tools.ABtoString(tools.HSToAB(options.k))).slice(0,-1) );
                     importDataObj = {
                         kty: 'oct',
-                        k: btoa(tools.HSToAB(options.k)).slice(0, -1), // HexString -> Uint8Array -> Base64 -> Remove Last Char.
+                        k: btoa(tools.ABtoString(tools.HSToAB(options.k))).slice(0,-1), // HexString -> Uint8Array -> String -> Base64 -> Remove Last Char.
                         alg: 'A256GCM',
                         ext: true
                     }
@@ -260,8 +261,8 @@ angular.module('ngWebCrypto')
                     throw 'unsupported crypto class';
                 }
             }
-            console.log('algo data obj', algorithmDataObj);
-            console.log('import obj', importDataObj);
+            // console.log('algo data obj', algorithmDataObj);
+            // console.log('import obj', importDataObj);
             var promise = new Promise((resolve, reject) => {
                 crypto.subtle.importKey(
                     options.format,
@@ -518,12 +519,17 @@ angular.module('ngWebCrypto')
                     tools.StringtoAB(options.data)
                 )
                     .then((encrypted) => {
+                        console.log('enc success');
                         var data = {
                             encrypted: tools.ABToHS(new Uint8Array(encrypted)),
                             iv: tools.ABToHS(encIV)
                         };
                         // == Ejecutar promesa
                         resolve(data);
+                    })
+                    .catch((err) => {
+                        reject(err);
+                        throw err;
                     });
             });
             promise.success = (fn) => {
@@ -667,12 +673,12 @@ angular.module('ngWebCrypto')
                     return promise;
                 },
                 //Accesos públicos y short-cuts.
-                export: (name) => this.exportKey({ name: name }),
+                export: (name) => this.exportKey({ name }),
                 exportDefaultKey: () => this.exportKey({ default: true }),
-                encrypt: (name, data) => this.encrypt({ name: name, data: data }),
-                decrypt: (name, data, iv) => this.decrypt({ name: name, data: data, iv: iv }),
-                encryptWithDefaultKey: (data) => this.encrypt({ default: true, data: data }),
-                decryptWithDefaultKey: (data, iv) => this.decrypt({ default: true, data: data, iv: iv }),
+                encrypt: (name, data) => this.encrypt({ name, data }),
+                decrypt: (name, data, iv) => this.decrypt({ name, data, iv }),
+                encryptWithDefaultKey: (data) => this.encrypt({ default: true, data }),
+                decryptWithDefaultKey: (data, iv) => this.decrypt({ default: true, data, iv }),
                 getDefaultKeys: () => this.getDefaultKeys(),
                 checkCryptoKey: (key) => this.checkCryptoKey(key),
                 checkKey: (key) => this.checkKey(key)
