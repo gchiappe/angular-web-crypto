@@ -8,14 +8,21 @@ More information about "Web Crypto API":
 - [Mozilla Developer Network](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
 - [WebCrypto by The Chromium Project](https://www.chromium.org/blink/webcrypto)
 
+## Features
+
+- Full AngularJS module integration.
+- Name based key storage for avoiding direct crypto objects access.
+- Latests key exchange and encrypting algorithms.
+- Native browser's "Web Crypto API" usage for maximum performance.
+- $http -like service for automatic encrypt and decrypt XHR data (requires a server-side implementation).
 
 ## Requirements
 
 - Web Cryptography API compatible browser, [check this list](http://caniuse.com/#feat=cryptography).
-- Angular
+- AngularJS
 
 Please note that this does not work with MS IE and will never be. 
-Using on MS Edge browser has not been tested but should work.
+Using on MS Edge browser has not been tested and its likely to not work since Edge does not support ECDH.
 
 ## Building from source
 
@@ -107,20 +114,17 @@ angular.module('YourApp')
 
 ## Working example
 
-Please note that the use of the $webCryptoProvider is only for
-example purposes and it **should** be used at config time.
-
 ```javascript
 angular.module('YourApp')
-.controller('YourController', function($webCryptoProvider, $webCrypto) {
-    //Generate your ECDH private key.
-    $webCryptoProvider.generateKey({name: 'alice'})
+.controller('YourController', function($webCrypto) {
+    //Generate your ECDH private key using a shortcut function.
+    $webCrypto.generate({name: 'alice'})
     .success(
         function(aliceKeyName) {
             //Here you can export alice's public key to send to "bob" so he can also agree the keys.
             var alicePublicKey = $webCrypto.export(aliceKeyName);
             //Generate another ECDH private key (we will use the public part of this one)
-            $webCryptoProvider.generateKey({name: 'bob'})
+            $webCrypto.generate({name: 'bob'})
             .success(
                 function(bobKeyName) {
                     //We will export the bob's public key.
@@ -162,9 +166,19 @@ angular.module('YourApp')
 });    
 ```
 
-## Encrypting JSON objects
+## Encrypting & Decrypting JSON objects
 
 Just convert your JSON objects to String using JSON.stringify before encrypting and JSON.parse after decrypting.
+
+## FAQ
+
+- Why all output is HexString encoded?
+
+    Hex String is a highly portable encoding and safe for transport in any encoding (ASCII, UTF-8, etc.)
+
+- Why the $httpCrypto service does not support the GET method?
+
+    Using the GET method lowers the security of the transporting data.
 
 ## Work in progress
 

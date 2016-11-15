@@ -30,12 +30,14 @@ SOFTWARE.
 var NgWebCryptoUtils = function () {
     function NgWebCryptoUtils() {
         this.ABtoString = function (buffer) {
-            var str = "";
-            for (var iii = 0; iii < buffer.byteLength; iii++) {
-                str += String.fromCharCode(buffer[iii]);
-            }
-            return str;
+            return String.fromCharCode.apply(null, buffer);
         };
+        // var str = "";
+        // for (var iii = 0; iii < buffer.byteLength; iii++) {
+        //     str += String.fromCharCode(buffer[iii]);
+        // }
+        // return str;
+        //};
         this.StringtoAB = function (str) {
             var bytes = new Uint8Array(str.length);
             for (var iii = 0; iii < str.length; iii++) {
@@ -78,16 +80,23 @@ var NgWebCryptoUtils = function () {
     return NgWebCryptoUtils;
 }();
 var webCryptoConstants = {
-    classes: {
+    class: {
         ECDH: 'ECDH',
         AESGCM: 'AES-GCM'
     },
     namedCurve: {
-        P256: 'P-256'
+        P128: 'P-128',
+        P256: 'P-256',
+        P521: 'P-521'
     },
     format: {
         RAW: 'raw',
         JWK: 'jwk'
+    },
+    type: {
+        PRIVATE: 'private',
+        PUBLIC: 'public',
+        MIXED: 'mixed'
     }
 };
 angular.module('ngWebCrypto', []);
@@ -136,26 +145,25 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             throw 'key name "', options.name, '" already in use.';
         }
         if (!tools.isDefined(options.namedCurve)) {
-            options.namedCurve = 'P-256';
+            options.namedCurve = webCryptoConstants.namedCurve.P256;
         }
         if (!tools.isDefined(options.type)) {
-            options.type = 'private';
+            options.type = webCryptoConstants.type.PRIVATE;
         }
-        if (!(options.type == 'private' || options.type == 'public' || options.type == 'mixed')) {
+        if (!(options.type == webCryptoConstants.type.PRIVATE || options.type == webCryptoConstants.type.PUBLIC || options.type == webCryptoConstants.type.MIXED)) {
             throw 'invalid key type (private, public, mixed).';
         }
         // == Crear Promesa
         var promise = new Promise(function (resolve, reject) {
             // == Crear Llave
             crypto.subtle.generateKey({
-                name: 'ECDH',
+                name: webCryptoConstants.class.ECDH,
                 namedCurve: options.namedCurve
             }, true, ['deriveKey', 'deriveBits']).then(function (key) {
-                var gRaw, gJwk;
-                crypto.subtle.exportKey('jwk', key.publicKey).then(function (eJwk) {
-                    crypto.subtle.exportKey('raw', key.publicKey).then(function (eRaw) {
+                crypto.subtle.exportKey(webCryptoConstants.format.JWK, key.publicKey).then(function (eJwk) {
+                    crypto.subtle.exportKey(webCryptoConstants.format.RAW, key.publicKey).then(function (eRaw) {
                         keys.push({
-                            class: 'ECDH',
+                            class: webCryptoConstants.class.ECDH,
                             type: options.type,
                             name: options.name,
                             key: key,
@@ -207,25 +215,46 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
         if (_this.checkKey(options.name)) {
             throw 'key name "', options.name, '" already in use.';
         }
-        if (!tools.isDefined(options.class)) options.class = webCryptoConstants.classes.ECDH;
+        if (!tools.isDefined(options.class)) options.class = webCryptoConstants.class.ECDH;
         if (!tools.isDefined(options.crv)) options.crv = webCryptoConstants.namedCurve.P256;
-        if (!tools.isDefined(options.format)) options.format = webCryptoConstants.format.JWK;
-        if (!tools.isDefined(options.type)) options.type = 'public';
-        var importDataObj = void 0;
+        if (!tools.isDefined(options.format)) options.format = webCryptoConstants.format.RAW;
+        if (!tools.isDefined(options.type)) options.type = webCryptoConstants.type.PUBLIC;
+        var importDataObj = void 0,
+            algorithmDataObj = void 0;
         var keyCapabilities = [];
         if (options.format == webCryptoConstants.format.JWK) {
-            if (!tools.isDefined(options.x) || !tools.isDefined(options.y) || !tools.isDefined(options.d)) {
-                throw 'x, y and d parameters are required to import an ECDH key.';
+            if (options.class == webCryptoConstants.class.ECDH) {
+                if (!tools.isDefined(options.x) || !tools.isDefined(options.y) || !tools.isDefined(options.d)) {
+                    throw 'x, y and d parameters are required to import an ECDH key.';
+                }
+                importDataObj = {
+                    kty: 'EC',
+                    crv: options.crv,
+                    x: options.x,
+                    y: options.y,
+                    d: options.d,
+                    ext: true
+                };
+                algorithmDataObj = {
+                    name: webCryptoConstants.class.ECDH,
+                    namedCurve: options.crv
+                };
+                if (options.type == webCryptoConstants.type.PRIVATE) keyCapabilities = ['deriveKey', 'deriveBits'];
+            } else if (options.class == webCryptoConstants.class.AESGCM) {
+                if (!tools.isDefined(options.k)) {
+                    throw 'k parameter is required to import an AES-GCM key (k paramter must be HexString encoded).';
+                }
+                importDataObj = {
+                    kty: 'oct',
+                    k: btoa(tools.HSToAB(options.k)).slice(0, -1), // HexString -> Uint8Array -> Base64 -> Remove Last Char.
+                    alg: 'A256GCM',
+                    ext: true
+                };
+                algorithmDataObj = {
+                    name: webCryptoConstants.class.AESGCM
+                };
+                keyCapabilities = ['encrypt', 'decrypt'];
             }
-            importDataObj = {
-                kty: 'EC',
-                crv: options.crv,
-                x: options.x,
-                y: options.y,
-                d: options.d,
-                ext: true
-            };
-            if (options.type == 'private') keyCapabilities = ['deriveKey', 'deriveBits'];
         } else {
             if (!tools.isDefined(options.raw)) {
                 throw 'raw parameter is missing.';
@@ -233,14 +262,11 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             importDataObj = tools.HSToAB(options.raw);
         }
         var promise = new Promise(function (resolve, reject) {
-            crypto.subtle.importKey(options.format, importDataObj, {
-                name: 'ECDH',
-                namedCurve: options.crv
-            }, true, keyCapabilities).then(function (key) {
+            crypto.subtle.importKey(options.format, importDataObj, algorithmDataObj, true, keyCapabilities).then(function (key) {
                 crypto.subtle.exportKey('jwk', key).then(function (eJwk) {
                     crypto.subtle.exportKey('raw', key).then(function (eRaw) {
                         keys.push({
-                            class: 'ECDH',
+                            class: options.class,
                             type: options.type,
                             name: options.name,
                             key: { publicKey: key },
@@ -292,13 +318,13 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
         }
         // == Defectos
         if (!tools.isDefined(options.type)) {
-            options.type = 'raw';
+            options.type = webCryptoConstants.format.RAW;
         }
-        if (options.type == 'jwk') {
+        if (options.type == webCryptoConstants.format.JWK) {
             if (tools.isDefined(theKey.jwk)) return theKey.jwk;else {
                 throw 'the key "', options.name, '" cannot be exported.';
             }
-        } else if (options.type == 'raw') {
+        } else if (options.type == webCryptoConstants.format.RAW) {
             if (tools.isDefined(theKey.raw)) return tools.ABToHS(new Uint8Array(theKey.raw));else {
                 throw 'the key "', options.name, '" cannot be exported.';
             }
@@ -308,14 +334,8 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
     };
     this.deriveBits = function (options) {
         // == Chequeo de errores.
-        if (!tools.isDefined(options.name)) {
-            throw 'key name is required for deriving ECDH keys.';
-        }
-        if (getCryptoKey(options.name) != -1) {
-            throw 'key name "', options.name, '" already in use.';
-        }
         if (!tools.isDefined(options.privateKeyName) || !tools.isDefined(options.publicKeyName)) {
-            throw 'deriving keys require two previously stored keys.';
+            throw 'deriving bits require two previously stored keys.';
         }
         // == Obtener las llaves y verificarlas.   
         var privateKey = getKey(options.privateKeyName),
@@ -342,12 +362,12 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             options.format = 'HS';
         }
         if (!tools.isDefined(options.namedCurve)) {
-            options.namedCurve = 'P-256';
+            options.namedCurve = webCryptoConstants.namedCurve.P256;
         }
         // == Derivacion
         var promise = new Promise(function (resolve, reject) {
             crypto.subtle.deriveBits({
-                name: 'ECDH',
+                name: webCryptoConstants.class.ECDH,
                 namedCurve: options.namedCurve,
                 public: publicKey.key.publicKey
             }, privateKey, options.bits).then(function (bits) {
@@ -611,10 +631,17 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                     return tools.StringtoAB(str);
                 }
             },
-            deriveBits: function deriveBits(options) {},
             //Acceso público a la generación de llaves
             generate: function generate(options) {
                 return _this.generateKey(options);
+            },
+            //Genera una nueva llave AES-GCM en base a una semilla (obtenida de deriveBits)
+            generateWithSeed: function generateWithSeed(seed) {
+                return _this.importKey({
+                    name: tools.ABToHS(crypto.getRandomValues(new Uint8Array(12))),
+                    k: seed,
+                    class: webCryptoConstants.class.AESGCM,
+                    format: webCryptoConstants.format.JWK });
             },
             //Importar llave pública
             import: function _import(raw) {
@@ -622,7 +649,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             },
             //Importar llave pública y derivar con la llave privada por defecto para generar una criptollave.
             importAndDeriveWithDefaultKey: function importAndDeriveWithDefaultKey(raw) {
-                var _provider = this;
+                var _provider = _this;
                 var defKeys = _provider.getDefaultKeys();
                 var importName = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
                 var rsaKeyName = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
@@ -677,6 +704,34 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                 };
                 return promise;
             },
+            //Importa y crea semilla para importar llave AES-GCM.
+            importAndDeriveBits: function importAndDeriveBits(name, raw) {
+                var _provider = _this;
+                var importName = tools.ABToHS(crypto.getRandomValues(new Uint8Array(12)));
+                var promise = new Promise(function (resolve, reject) {
+                    _provider.importKey({ name: importName, raw: raw }).success(function (importedKeyName) {
+                        _provider.deriveBits({
+                            privateKeyName: name,
+                            publicKeyName: importedKeyName
+                        }).success(function (bits) {
+                            resolve(bits);
+                        });
+                    });
+                });
+                promise.success = function (fn) {
+                    promise.then(function (data) {
+                        fn(data);
+                    });
+                    return promise;
+                };
+                promise.error = function (fn) {
+                    promise.then(null, function (name) {
+                        fn(name);
+                    });
+                    return promise;
+                };
+                return promise;
+            },
             //Accesos públicos y short-cuts.
             export: function _export(name) {
                 return _this.exportKey({ name: name });
@@ -695,10 +750,19 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             },
             decryptWithDefaultKey: function decryptWithDefaultKey(data, iv) {
                 return _this.decrypt({ default: true, data: data, iv: iv });
+            },
+            getDefaultKeys: function getDefaultKeys() {
+                return _this.getDefaultKeys();
+            },
+            checkCryptoKey: function checkCryptoKey(key) {
+                return _this.checkCryptoKey(key);
+            },
+            checkKey: function checkKey(key) {
+                return _this.checkKey(key);
             }
         };
     };
-}).factory('$httpCrypto', function ($webCryptoProvider, $webCrypto, $http, $injector) {
+}).factory('$httpCrypto', function ($webCrypto, $http, $injector) {
     //This service is a WIP part, not tested but should be functional, requires a compatible
     //server.
     var tools = $injector.instantiate(NgWebCryptoUtils);
@@ -714,22 +778,19 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                 data = {};
             }
             if (!tools.isDefined(key)) {
-                key = $webCryptoProvider.getDefaultKeys().crypto;
+                key = $webCrypto.getDefaultKeys().crypto;
                 if (!tools.isDefined(key)) {
                     console.error('default crypto key is not defined');
                     return;
                 }
             }
-            if (!$webCryptoProvider.checkCryptoKey(key)) {
+            if (!$webCrypto.checkCryptoKey(key)) {
                 console.error('key "', key, '" not found.');
                 return;
             }
             var ucdata_str = JSON.stringify(data);
             var promise = new Promise(function (resolve, reject) {
-                $webCryptoProvider.encrypt({
-                    name: key,
-                    data: ucdata_str
-                }).success(function (encrypted, iv) {
+                $webCrypto.encrypt(key, ucdata_str).success(function (encrypted, iv) {
                     var encData = {
                         data: encrypted,
                         iv: iv
@@ -752,11 +813,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                         var rdatao = rdata.d.split('.')[0];
                         var rivo = rdata.d.split('.')[1];
                         // == Decifrar ahora
-                        $webCryptoProvider.decrypt({
-                            name: key,
-                            data: rdatao,
-                            iv: rivo
-                        }).success(function (decrypted) {
+                        $webCrypto.decrypt(key, rdatao, ivo).success(function (decrypted) {
                             try {
                                 var parsed = JSON.parse(decrypted);
                             } catch (e) {
