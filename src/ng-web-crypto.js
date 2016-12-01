@@ -514,7 +514,7 @@ angular.module('ngWebCrypto')
                         else { reject('default key is not defined.'); }
                 }
                 // == Verificacion de errores
-                if (!tools.isDefined(options.name)) { reject('key name is required for deriving ECDH keys.'); }
+                if (!tools.isDefined(options.name)) { reject('crypto key name is required for encrypting data.'); }
                 if (!tools.isDefined(options.data)) { reject('data option must be defined and not null.'); }
                 // == Obtener llave            
                 if (getCryptoKey(options.name) == -1) { reject(`Key ${options.name} not found.`); }
@@ -758,7 +758,7 @@ angular.module('ngWebCrypto')
                                         var rdatao = rdata.d.split('.')[0];
                                         var rivo = rdata.d.split('.')[1];
                                         // == Decifrar ahora
-                                        $webCrypto.decrypt(key, rdatao, ivo)
+                                        $webCrypto.decrypt(key, rdatao, rivo)
                                             .success(
                                             decrypted => {
                                                 try {

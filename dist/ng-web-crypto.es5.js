@@ -550,7 +550,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             }
             // == Verificacion de errores
             if (!tools.isDefined(options.name)) {
-                reject('key name is required for deriving ECDH keys.');
+                reject('crypto key name is required for encrypting data.');
             }
             if (!tools.isDefined(options.data)) {
                 reject('data option must be defined and not null.');
@@ -850,7 +850,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                         var rdatao = rdata.d.split('.')[0];
                         var rivo = rdata.d.split('.')[1];
                         // == Decifrar ahora
-                        $webCrypto.decrypt(key, rdatao, ivo).success(function (decrypted) {
+                        $webCrypto.decrypt(key, rdatao, rivo).success(function (decrypted) {
                             try {
                                 var parsed = JSON.parse(decrypted);
                             } catch (e) {
