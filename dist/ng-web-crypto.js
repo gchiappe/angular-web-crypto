@@ -707,7 +707,7 @@ angular.module('ngWebCrypto')
         //server.
         var tools = $injector.instantiate(NgWebCryptoUtils);
         return {
-            post: function (server, data, key = null) {
+            post: function (server, data, cfg = null, key = null) {
                 var promise = new Promise(
                     (resolve, reject) => {
                         if (!tools.isDefined(server)) {
@@ -737,7 +737,8 @@ angular.module('ngWebCrypto')
                                     server,
                                     {
                                         d: `${encrypted}.${iv}`
-                                    }
+                                    },
+                                    cfg
                                 )
                                     .success(
                                     (rdata,

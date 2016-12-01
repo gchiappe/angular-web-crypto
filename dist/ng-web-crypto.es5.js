@@ -810,7 +810,8 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
     var tools = $injector.instantiate(NgWebCryptoUtils);
     return {
         post: function post(server, data) {
-            var key = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+            var cfg = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+            var key = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
             var promise = new Promise(function (resolve, reject) {
                 if (!tools.isDefined(server)) {
@@ -836,7 +837,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                     };
                     $http.post(server, {
                         d: encrypted + '.' + iv
-                    }).success(function (rdata, status, headers, config, statusText) {
+                    }, cfg).success(function (rdata, status, headers, config, statusText) {
                         // == Validar respuesta
                         if (!tools.isDefined(rdata.d)) {
                             console.error('invalid crypto response from server.');
