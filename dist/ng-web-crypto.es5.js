@@ -299,6 +299,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                                 raw: eRaw
                             });
                             if (getCryptoKey(options.name) != -1) {
+                                if (!tools.isDefined(defaultCryptoKey)) defaultCryptoKey = options.name;
                                 resolve(options.name);
                             } else {
                                 reject('key was not added to storage.');
@@ -313,6 +314,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                                 raw: eRaw
                             });
                             if (getKey(options.name) != -1) {
+                                if (!tools.isDefined(defaultKey)) defaultKey = options.name;
                                 resolve(options.name);
                             } else {
                                 reject('key was not added to storage.');
