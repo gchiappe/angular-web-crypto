@@ -28,13 +28,14 @@ SOFTWARE.
 'use strict';
 var NgWebCryptoUtils = (() => {
     function NgWebCryptoUtils() {
-        this.ABtoString = (buffer) => String.fromCharCode.apply(null, buffer);
-        // var str = "";
-        // for (var iii = 0; iii < buffer.byteLength; iii++) {
-        //     str += String.fromCharCode(buffer[iii]);
-        // }
-        // return str;
-        //};
+        //this.ABtoString = (buffer) => String.fromCharCode.apply(null, buffer);
+        this.ABtoString = (buffer) => {
+            var str = "";
+            for (var iii = 0; iii < buffer.byteLength; iii++) {
+                str += String.fromCharCode(buffer[iii]);
+            }
+            return str;
+        };
         this.StringToBase64Url = (str) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/\=+$/, '');
         this.Base64UrlToString = (str) => {
             str = (str + '===').slice(0, str.length + (str.length % 4));
@@ -48,6 +49,7 @@ var NgWebCryptoUtils = (() => {
             }
             return bytes;
         };
+        //this.StringtoAB = (str) => new TextEncoder("utf-8").encode(str);
         this.isFunction = (obj) => (!!(obj && obj.constructor && obj.call && obj.apply));
         this.isDefined = (variable) => {
             if (typeof variable === 'undefined' || variable === null) {
@@ -730,14 +732,11 @@ angular.module('ngWebCrypto')
                             .success(
                             (encrypted, iv) => {
                                 var encData = {
-                                    data: encrypted,
-                                    iv
+                                   d: `${encrypted}.${iv}`
                                 }
                                 $http.post(
                                     server,
-                                    {
-                                        d: `${encrypted}.${iv}`
-                                    },
+                                    encData,
                                     cfg
                                 )
                                     .success(

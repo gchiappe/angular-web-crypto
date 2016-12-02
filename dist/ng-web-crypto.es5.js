@@ -29,15 +29,14 @@ SOFTWARE.
 
 var NgWebCryptoUtils = function () {
     function NgWebCryptoUtils() {
+        //this.ABtoString = (buffer) => String.fromCharCode.apply(null, buffer);
         this.ABtoString = function (buffer) {
-            return String.fromCharCode.apply(null, buffer);
+            var str = "";
+            for (var iii = 0; iii < buffer.byteLength; iii++) {
+                str += String.fromCharCode(buffer[iii]);
+            }
+            return str;
         };
-        // var str = "";
-        // for (var iii = 0; iii < buffer.byteLength; iii++) {
-        //     str += String.fromCharCode(buffer[iii]);
-        // }
-        // return str;
-        //};
         this.StringToBase64Url = function (str) {
             return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/\=+$/, '');
         };
@@ -53,6 +52,7 @@ var NgWebCryptoUtils = function () {
             }
             return bytes;
         };
+        //this.StringtoAB = (str) => new TextEncoder("utf-8").encode(str);
         this.isFunction = function (obj) {
             return !!(obj && obj.constructor && obj.call && obj.apply);
         };
@@ -832,12 +832,9 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                 var ucdata_str = JSON.stringify(data);
                 $webCrypto.encrypt(key, ucdata_str).success(function (encrypted, iv) {
                     var encData = {
-                        data: encrypted,
-                        iv: iv
-                    };
-                    $http.post(server, {
                         d: encrypted + '.' + iv
-                    }, cfg).success(function (rdata, status, headers, config, statusText) {
+                    };
+                    $http.post(server, encData, cfg).success(function (rdata, status, headers, config, statusText) {
                         // == Validar respuesta
                         if (!tools.isDefined(rdata.d)) {
                             console.error('invalid crypto response from server.');
