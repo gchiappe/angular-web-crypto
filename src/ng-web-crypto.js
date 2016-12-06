@@ -28,8 +28,7 @@ SOFTWARE.
 'use strict';
 var NgWebCryptoUtils = (() => {
     function NgWebCryptoUtils() {
-        //this.ABtoString = (buffer) => String.fromCharCode.apply(null, buffer);
-        this.StringToUTF8 = (str) => new TextDecoder("utf-8").decode(str);
+        //this.ABtoString = (buffer) => String.fromCharCode.apply(null, buffer);        
         this.ABtoString = (buffer) => {
             var str = "";
             for (var iii = 0; iii < buffer.byteLength; iii++) {
@@ -37,12 +36,15 @@ var NgWebCryptoUtils = (() => {
             }
             return str;
         };
+        this.ABtoUTF8String = (buffer) => new TextDecoder("utf-8").decode(buffer);
         this.StringToBase64Url = (str) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/\=+$/, '');
         this.Base64UrlToString = (str) => {
             str = (str + '===').slice(0, str.length + (str.length % 4));
             str = str.replace(/-/g, '+').replace(/_/g, '/');
             return atob(str);
         }
+        // this.StringToBase64Url = (str) => btoa(unescape(encodeURIComponent(str)));
+        // this.Base64UrlToString = (str) => decodeURIComponent(escape(window.atob(str)));
         this.StringtoAB = (str) => {
             var bytes = new Uint8Array(str.length);
             for (var iii = 0; iii < str.length; iii++) {
@@ -50,7 +52,7 @@ var NgWebCryptoUtils = (() => {
             }
             return bytes;
         };
-        //this.StringtoAB = (str) => new TextEncoder("utf-8").encode(str);
+        this.UTF8StringtoAB = (str) => new TextEncoder("utf-8").encode(str);
         this.isFunction = (obj) => (!!(obj && obj.constructor && obj.call && obj.apply));
         this.isDefined = (variable) => {
             if (typeof variable === 'undefined' || variable === null) {
@@ -537,7 +539,7 @@ angular.module('ngWebCrypto')
                         tagLength: options.tagLength
                     },
                     getCryptoKey(options.name).key.publicKey,
-                    tools.StringtoAB(options.data)
+                    tools.UTF8StringtoAB(options.data)
                 )
                     .then((encrypted) => {
                         var data = {
@@ -584,7 +586,7 @@ angular.module('ngWebCrypto')
                     getCryptoKey(options.name).key.publicKey,
                     tools.HSToAB(options.data))
                     .then((dec) => {
-                        data = { decrypted: tools.ABtoString(new Uint8Array(dec)) }
+                        data = { decrypted: tools.ABtoUTF8String(new Uint8Array(dec)) }
                         resolve(data);
                     })
                     .catch((err) => { reject(err); })
@@ -728,7 +730,7 @@ angular.module('ngWebCrypto')
                         if (!$webCrypto.checkCryptoKey(key)) {
                             reject(`key ${key} not found`);
                         }
-                        var ucdata_str = tools.StringToUTF8(JSON.stringify(data));
+                        var ucdata_str = JSON.stringify(data);
                         $webCrypto.encrypt(key, ucdata_str)
                             .success(
                             (encrypted, iv) => {
@@ -765,7 +767,7 @@ angular.module('ngWebCrypto')
                                             .success(
                                             decrypted => {
                                                 try {                                                    
-                                                    var parsed = JSON.parse(tools.StringToUTF8(decrypted));
+                                                    var parsed = JSON.parse(decrypted);
                                                 } catch (e) {
                                                     console.error('decrypted response is not json.');
                                                     reject(decrypted);

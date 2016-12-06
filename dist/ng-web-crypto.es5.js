@@ -29,16 +29,16 @@ SOFTWARE.
 
 var NgWebCryptoUtils = function () {
     function NgWebCryptoUtils() {
-        //this.ABtoString = (buffer) => String.fromCharCode.apply(null, buffer);
-        this.StringToUTF8 = function (str) {
-            return new TextDecoder("utf-8").decode(str);
-        };
+        //this.ABtoString = (buffer) => String.fromCharCode.apply(null, buffer);        
         this.ABtoString = function (buffer) {
             var str = "";
             for (var iii = 0; iii < buffer.byteLength; iii++) {
                 str += String.fromCharCode(buffer[iii]);
             }
             return str;
+        };
+        this.ABtoUTF8String = function (buffer) {
+            return new TextDecoder("utf-8").decode(buffer);
         };
         this.StringToBase64Url = function (str) {
             return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/\=+$/, '');
@@ -48,6 +48,8 @@ var NgWebCryptoUtils = function () {
             str = str.replace(/-/g, '+').replace(/_/g, '/');
             return atob(str);
         };
+        // this.StringToBase64Url = (str) => btoa(unescape(encodeURIComponent(str)));
+        // this.Base64UrlToString = (str) => decodeURIComponent(escape(window.atob(str)));
         this.StringtoAB = function (str) {
             var bytes = new Uint8Array(str.length);
             for (var iii = 0; iii < str.length; iii++) {
@@ -55,7 +57,9 @@ var NgWebCryptoUtils = function () {
             }
             return bytes;
         };
-        //this.StringtoAB = (str) => new TextEncoder("utf-8").encode(str);
+        this.UTF8StringtoAB = function (str) {
+            return new TextEncoder("utf-8").encode(str);
+        };
         this.isFunction = function (obj) {
             return !!(obj && obj.constructor && obj.call && obj.apply);
         };
@@ -579,7 +583,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                 name: getCryptoKey(options.name).class,
                 iv: encIV,
                 tagLength: options.tagLength
-            }, getCryptoKey(options.name).key.publicKey, tools.StringtoAB(options.data)).then(function (encrypted) {
+            }, getCryptoKey(options.name).key.publicKey, tools.UTF8StringtoAB(options.data)).then(function (encrypted) {
                 var data = {
                     encrypted: tools.ABToHS(new Uint8Array(encrypted)),
                     iv: tools.ABToHS(encIV)
@@ -638,7 +642,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             }
 
             crypto.subtle.decrypt({ name: getCryptoKey(options.name).class, iv: tools.HSToAB(options.iv), tagLength: options.tagLength }, getCryptoKey(options.name).key.publicKey, tools.HSToAB(options.data)).then(function (dec) {
-                data = { decrypted: tools.ABtoString(new Uint8Array(dec)) };
+                data = { decrypted: tools.ABtoUTF8String(new Uint8Array(dec)) };
                 resolve(data);
             }).catch(function (err) {
                 reject(err);
@@ -832,7 +836,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                 if (!$webCrypto.checkCryptoKey(key)) {
                     reject("key " + key + " not found");
                 }
-                var ucdata_str = tools.StringToUTF8(JSON.stringify(data));
+                var ucdata_str = JSON.stringify(data);
                 $webCrypto.encrypt(key, ucdata_str).success(function (encrypted, iv) {
                     var encData = {
                         d: encrypted + "." + iv
@@ -855,7 +859,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                         // == Decifrar ahora
                         $webCrypto.decrypt(key, rdatao, rivo).success(function (decrypted) {
                             try {
-                                var parsed = JSON.parse(tools.StringToUTF8(decrypted));
+                                var parsed = JSON.parse(decrypted);
                             } catch (e) {
                                 console.error('decrypted response is not json.');
                                 reject(decrypted);
