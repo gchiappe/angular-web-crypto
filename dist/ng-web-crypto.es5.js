@@ -31,7 +31,7 @@ var NgWebCryptoUtils = function () {
     function NgWebCryptoUtils() {
         //this.ABtoString = (buffer) => String.fromCharCode.apply(null, buffer);
         this.StringToUTF8 = function (str) {
-            return new TextEncoder("utf-8").decode(str);
+            return new TextDecoder("utf-8").decode(str);
         };
         this.ABtoString = function (buffer) {
             var str = "";

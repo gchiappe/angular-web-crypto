@@ -29,7 +29,7 @@ SOFTWARE.
 var NgWebCryptoUtils = (() => {
     function NgWebCryptoUtils() {
         //this.ABtoString = (buffer) => String.fromCharCode.apply(null, buffer);
-        this.StringToUTF8 = (str) => new TextEncoder("utf-8").decode(str);
+        this.StringToUTF8 = (str) => new TextDecoder("utf-8").decode(str);
         this.ABtoString = (buffer) => {
             var str = "";
             for (var iii = 0; iii < buffer.byteLength; iii++) {
