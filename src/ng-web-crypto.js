@@ -29,6 +29,7 @@ SOFTWARE.
 var NgWebCryptoUtils = (() => {
     function NgWebCryptoUtils() {
         //this.ABtoString = (buffer) => String.fromCharCode.apply(null, buffer);
+        this.StringToUTF8 = (str) => new TextEncoder("utf-8").decode(str);
         this.ABtoString = (buffer) => {
             var str = "";
             for (var iii = 0; iii < buffer.byteLength; iii++) {
@@ -727,7 +728,7 @@ angular.module('ngWebCrypto')
                         if (!$webCrypto.checkCryptoKey(key)) {
                             reject(`key ${key} not found`);
                         }
-                        var ucdata_str = JSON.stringify(data);
+                        var ucdata_str = tools.StringToUTF8(JSON.stringify(data));
                         $webCrypto.encrypt(key, ucdata_str)
                             .success(
                             (encrypted, iv) => {
@@ -763,8 +764,8 @@ angular.module('ngWebCrypto')
                                         $webCrypto.decrypt(key, rdatao, rivo)
                                             .success(
                                             decrypted => {
-                                                try {
-                                                    var parsed = JSON.parse(decrypted);
+                                                try {                                                    
+                                                    var parsed = JSON.parse(tools.StringToUTF8(decrypted));
                                                 } catch (e) {
                                                     console.error('decrypted response is not json.');
                                                     reject(decrypted);
