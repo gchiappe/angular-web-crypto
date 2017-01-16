@@ -841,7 +841,20 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                     var encData = {
                         d: encrypted + "." + iv
                     };
-                    $http.post(server, encData, cfg).success(function (rdata, status, headers, config, statusText) {
+                    $http.post(server, encData, cfg).then(function (responseObj) {
+                        /*
+                        data – {string|Object} – The response body transformed with the transform functions.
+                        status – {number} – HTTP status code of the response.
+                        headers – {function([headerName])} – Header getter function.
+                        config – {Object} – The configuration object that was used to generate the request.
+                        statusText – {string} – HTTP status text of the response.
+                        */
+                        // == Parsear respuesta
+                        var rdata = responseObj.data;
+                        var status = responseObj.status;
+                        var headers = responseObj.headers;
+                        var config = responseObj.config;
+                        var statusText = responseObj.statusText;
                         // == Validar respuesta
                         if (!tools.isDefined(rdata.d)) {
                             console.error("invalid crypto response from server.");
@@ -885,7 +898,13 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                             };
                             reject(resultObj);
                         });
-                    }).error(function (rdata, status, headers, config, statusText) {
+                    }, function (responseObj) {
+                        // == Parsear respuesta
+                        var rdata = responseObj.data;
+                        var status = responseObj.status;
+                        var headers = responseObj.headers;
+                        var config = responseObj.config;
+                        var statusText = responseObj.statusText;
                         resultObj = {
                             data: null,
                             status: status,

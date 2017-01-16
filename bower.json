@@ -12,6 +12,9 @@
     "cryptography",
     "angular"
   ],
+  "dependencies": {
+    "angular": "^1.6.1"
+  },
   "license": "MIT",
   "ignore": [
     "**/.*",
