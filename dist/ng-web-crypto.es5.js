@@ -642,7 +642,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
             }
 
             crypto.subtle.decrypt({ name: getCryptoKey(options.name).class, iv: tools.HSToAB(options.iv), tagLength: options.tagLength }, getCryptoKey(options.name).key.publicKey, tools.HSToAB(options.data)).then(function (dec) {
-                data = { decrypted: tools.ABtoUTF8String(new Uint8Array(dec)) };
+                var data = { decrypted: tools.ABtoUTF8String(new Uint8Array(dec)) };
                 resolve(data);
             }).catch(function (err) {
                 reject(err);
@@ -825,7 +825,7 @@ angular.module('ngWebCrypto').provider('$webCrypto', function ($injector) {
                     reject("please define \"server\" in the options.");
                 }
                 if (!tools.isDefined(data)) {
-                    data = {};
+                    var data = {};
                 }
                 if (!tools.isDefined(key)) {
                     key = $webCrypto.getDefaultKeys().crypto;

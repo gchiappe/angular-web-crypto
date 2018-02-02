@@ -586,7 +586,7 @@ angular.module('ngWebCrypto')
                     getCryptoKey(options.name).key.publicKey,
                     tools.HSToAB(options.data))
                     .then((dec) => {
-                        data = { decrypted: tools.ABtoUTF8String(new Uint8Array(dec)) }
+                        var data = { decrypted: tools.ABtoUTF8String(new Uint8Array(dec)) }
                         resolve(data);
                     })
                     .catch((err) => { reject(err); })
@@ -719,7 +719,7 @@ angular.module('ngWebCrypto')
                             reject(`please define "server" in the options.`);
                         }
                         if (!tools.isDefined(data)) {
-                            data = {};
+                            var data = {};
                         }
                         if (!tools.isDefined(key)) {
                             key = $webCrypto.getDefaultKeys().crypto;
