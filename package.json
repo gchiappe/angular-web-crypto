@@ -1,11 +1,10 @@
 {
   "name": "angular-web-crypto",
-  "version": "0.0.12",
+  "version": "0.0.12a",
   "description": "Web Cryptography API bindings for AngularJS",
   "main": "ng-web-crypto.js",
   "dependencies": {
-    "babel-cli": "^6.18.0",
-    "babel-preset-latest": "^6.16.0"
+    "angular": "^1.6.1"
   },
   "devDependencies": {
     "babel-cli": "^6.18.0",
