@@ -1,6 +1,6 @@
 {
   "name": "angular-web-crypto",
-  "version": "0.0.12-b",
+  "version": "0.0.12-c",
   "description": "Web Cryptography API bindings for AngularJS",
   "main": "ng-web-crypto.js",
   "dependencies": {
@@ -8,8 +8,7 @@
   },
   "devDependencies": {
     "babel-cli": "^6.18.0",
-    "babel-preset-es2015": "^6.18.0",
-    "babel-preset-latest": "^6.16.0",
+    "babel-preset-env": "^1.6.1",
     "gulp": "^3.9.1",
     "gulp-babel": "^6.1.2",
     "gulp-concat": "^2.6.0",
@@ -19,7 +18,7 @@
     "gulp-uglify": "^2.0.0"
   },
   "scripts": {
-    "build": "babel src -d lib",
+    "build": "gulp",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
