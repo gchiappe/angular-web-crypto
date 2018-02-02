@@ -31,8 +31,8 @@ Using on MS Edge browser has not been tested and its likely to not work since Ed
     
     Install gulp-cli only if you don't have it already.
     ```bash
-    $ sudo npm install --global gulp-cli
-    $ npm install
+    $ yarn global add gulp-cli
+    $ yarn
     ```
 3. Build
     ```bash
@@ -44,12 +44,14 @@ Using on MS Edge browser has not been tested and its likely to not work since Ed
 ## Installation
 
 ```
-bower install angular-web-crypto --save-dev
+yarn add --dev angular-web-crypto
 ```
+
+Bower installation is deprecated.
 
 ```html
 <!-- You can also use the ES6 version, but I recommend ES5 for best compatibility. -->
-<script src="bower_components/angular-web-crypto/dist/ng-web-crypto.es5.min.js"></script>
+<script src="node_modules/angular-web-crypto/dist/ng-web-crypto.es5.min.js"></script>
 ```
 
 ## ECDH Key Agreement, Encryption and Decryption
@@ -59,7 +61,7 @@ Create your Elliptic Curve Diffie-Hellman private key.
 ```javascript
 // This code is intended to be used in the module (application) configuration.
 angular.module('YourApp', ['ngWebCrypto'])
-.config(function($webCryptoProvider) {
+.config(['$webCryptoProvider', function($webCryptoProvider) {
     //Generate your private key and set as default.
     $webCryptoProvider.generateKey({
             name: 'myAppKey'
@@ -68,7 +70,7 @@ angular.module('YourApp', ['ngWebCrypto'])
             console.log('Key Generated!');
         }
     )
-})
+}])
 ```
 
 Import other party public raw key. The key must be encoded in Hexadecimal String. 
@@ -76,7 +78,7 @@ Import other party public raw key. The key must be encoded in Hexadecimal String
 ```javascript
 // This code is intended to be used in a "service", "controller" or even a "directive".
 angular.module('YourApp')
-.controller('YourController', function($webCrypto) {
+.controller('YourController',['$webCrypto', function($webCrypto) {
     // If you have in ArrayBuffer format, convert first to Uint8Array.
     // var keyInUint8Array = new Uint8Array(keyArrayBuffer);
     // then convert Uint8Array to HexString
@@ -109,14 +111,14 @@ angular.module('YourApp')
             )
         }
     )
-})
+}])
 ```
 
 ## Working example
 
 ```javascript
 angular.module('YourApp')
-.controller('YourController', function($webCrypto) {
+.controller('YourController',['$webCrypto', function($webCrypto) {
     //Generate your ECDH private key using a shortcut function.
     $webCrypto.generate({name: 'alice'})
     .success(
@@ -163,7 +165,7 @@ angular.module('YourApp')
             )
         }
     );
-});    
+}]);    
 ```
 
 ## Encrypting & Decrypting JSON objects
@@ -186,13 +188,13 @@ This library is in current development but **core functionalities** are working 
 
 ## Docs
 
-Documentation will be soon available, for now you can try to read the source file, its very clear.
+Documentation will be soon available, for now you can try to read the source file, it is very clear.
 
 ## License
 
 The MIT License (MIT)
 
-Copyright ©2016 Giancarlo Chiappe Aguilar
+Copyright ©2018 Giancarlo Chiappe Aguilar
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
